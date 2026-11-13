@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Levend Schilderij</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div class="title">
+  <h1>Levend Schilderij</h1>
+  <p id="sub">Het licht volgt de echte tijd in Gouda</p>
+</div>
+
+<div class="bar" id="bar">
+  <button id="pick">Afbeelding kiezen</button>
+  <input type="file" id="file" accept="image/*" hidden>
+  <div class="sep"></div>
+  <div class="clock"><span class="t" id="clockT">--:--</span><span class="ph" id="clockPh">&nbsp;</span></div>
+  <div class="group">
+    <label for="timeSlider">Tijd van de dag</label>
+    <input type="range" id="timeSlider" min="0" max="1439" step="1" value="720">
+  </div>
+  <button id="live" class="on">Live</button>
+  <div class="sep"></div>
+  <div class="group">
+    <label for="motion">Beweging</label>
+    <input type="range" id="motion" class="small" min="0" max="1" step="0.01" value="0.5">
+  </div>
+  <button id="fs">Volledig scherm</button>
+</div>
+
+<div class="drop" id="drop"><div>Laat je schilderij hier los</div></div>
+<div class="err" id="err">Je browser ondersteunt geen WebGL, dus het schilderij kan niet bewegen.</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>

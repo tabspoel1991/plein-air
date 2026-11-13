@@ -1,0 +1,386 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Levend Schilderij</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root { --glass: rgba(18,16,14,.55); --line: rgba(255,255,255,.14); --txt: #f3eee6; --dim: rgba(243,238,230,.6); --accent: #e9b872; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; background: #0b0a09; overflow: hidden; color: var(--txt); font-family: Inter, system-ui, sans-serif; }
+  canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+  body.idle { cursor: none; }
+
+  .bar {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    display: flex; align-items: center; gap: 18px; padding: 12px 18px;
+    background: var(--glass); backdrop-filter: blur(14px) saturate(1.2); -webkit-backdrop-filter: blur(14px) saturate(1.2);
+    border: 1px solid var(--line); border-radius: 16px;
+    transition: opacity .6s ease, transform .6s ease; max-width: calc(100vw - 24px); flex-wrap: wrap; justify-content: center;
+  }
+  body.idle .bar, body.idle .title { opacity: 0; pointer-events: none; }
+  body.idle .bar { transform: translateX(-50%) translateY(10px); }
+
+  .title { position: fixed; top: 22px; left: 26px; font-family: Fraunces, serif; transition: opacity .6s; text-shadow: 0 1px 12px rgba(0,0,0,.5); }
+  .title h1 { font-weight: 600; font-size: 20px; letter-spacing: .2px; }
+  .title p { font-size: 13px; color: var(--dim); font-family: Inter, sans-serif; margin-top: 2px; }
+
+  .clock { display: flex; flex-direction: column; min-width: 92px; }
+  .clock .t { font-family: Fraunces, serif; font-size: 26px; line-height: 1; font-variant-numeric: tabular-nums; }
+  .clock .ph { font-size: 12px; color: var(--accent); margin-top: 3px; letter-spacing: .3px; }
+
+  .group { display: flex; flex-direction: column; gap: 6px; }
+  .group label { font-size: 11px; color: var(--dim); text-transform: uppercase; letter-spacing: .8px; }
+  input[type=range] { -webkit-appearance: none; appearance: none; width: 220px; height: 4px; border-radius: 4px; background: rgba(255,255,255,.18); outline: none; }
+  input[type=range].small { width: 110px; }
+  input[type=range]::-webkit-slider-thumb { -webkit-appearance: none; width: 16px; height: 16px; border-radius: 50%; background: var(--txt); border: 0; cursor: pointer; box-shadow: 0 0 0 4px rgba(233,184,114,.25); }
+  input[type=range]::-moz-range-thumb { width: 16px; height: 16px; border-radius: 50%; background: var(--txt); border: 0; cursor: pointer; }
+  #timeSlider { background: linear-gradient(90deg, #141a3a 0%, #2a2f5e 22%, #e59a6b 28%, #9cc7ee 40%, #b8d8f2 50%, #9cc7ee 62%, #f0a35e 72%, #3b2f5e 80%, #141a3a 100%); }
+
+  button {
+    font: 500 13px Inter, sans-serif; color: var(--txt); background: rgba(255,255,255,.08);
+    border: 1px solid var(--line); border-radius: 10px; padding: 9px 13px; cursor: pointer; white-space: nowrap;
+    transition: background .2s, border-color .2s;
+  }
+  button:hover { background: rgba(255,255,255,.16); }
+  button.on { border-color: var(--accent); color: var(--accent); }
+  .sep { width: 1px; align-self: stretch; background: var(--line); }
+
+  .drop { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(10,9,8,.7); z-index: 5; }
+  .drop.show { display: flex; }
+  .drop div { border: 2px dashed var(--accent); border-radius: 22px; padding: 46px 64px; font-family: Fraunces, serif; font-size: 24px; }
+  .err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font-size: 15px; color: var(--dim); }
+</style>
+</head>
+<body>
+<canvas id="gl"></canvas>
+
+<div class="title">
+  <h1>Levend Schilderij</h1>
+  <p id="sub">Het licht volgt de echte tijd in Gouda</p>
+</div>
+
+<div class="bar" id="bar">
+  <button id="pick">Afbeelding kiezen</button>
+  <input type="file" id="file" accept="image/*" hidden>
+  <div class="sep"></div>
+  <div class="clock"><span class="t" id="clockT">--:--</span><span class="ph" id="clockPh">&nbsp;</span></div>
+  <div class="group">
+    <label for="timeSlider">Tijd van de dag</label>
+    <input type="range" id="timeSlider" min="0" max="1439" step="1" value="720">
+  </div>
+  <button id="live" class="on">Live</button>
+  <div class="sep"></div>
+  <div class="group">
+    <label for="motion">Beweging</label>
+    <input type="range" id="motion" class="small" min="0" max="2" step="0.01" value="1">
+  </div>
+  <button id="fs">Volledig scherm</button>
+</div>
+
+<div class="drop" id="drop"><div>Laat je schilderij hier los</div></div>
+<div class="err" id="err">Je browser ondersteunt geen WebGL, dus het schilderij kan niet bewegen.</div>
+
+<script>
+(() => {
+  const LAT = 52.011, LON = 4.711; // Gouda
+
+  // ---------- WebGL setup ----------
+  const cv = document.getElementById('gl');
+  const gl = cv.getContext('webgl', { antialias: false, preserveDrawingBuffer: false });
+  if (!gl) { document.getElementById('err').style.display = 'flex'; return; }
+
+  const VS = `attribute vec2 a; varying vec2 v_uv;
+    void main(){ v_uv = vec2(a.x*0.5+0.5, 0.5-a.y*0.5); gl_Position = vec4(a,0.,1.); }`;
+
+  const FS = `precision highp float;
+  varying vec2 v_uv;
+  uniform sampler2D u_tex;
+  uniform vec2 u_res, u_img;
+  uniform float u_t, u_motion, u_k, u_expo, u_con, u_sat, u_skyAmt, u_vig, u_stars, u_glow;
+  uniform vec3 u_gain, u_sky, u_horizon;
+  const vec3 LUM = vec3(0.299,0.587,0.114);
+
+  float hash(vec2 p){ p = fract(p*vec2(123.34,456.21)); p += dot(p,p+45.32); return fract(p.x*p.y); }
+  float noise(vec2 p){ vec2 i=floor(p), f=fract(p); f=f*f*(3.-2.*f);
+    return mix(mix(hash(i),hash(i+vec2(1,0)),f.x), mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),f.x), f.y); }
+  float fbm(vec2 p){ float v=0., a=.5; for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+vec2(1.7,9.2); a*=.5; } return v; }
+  vec3 softLight(vec3 b, vec3 s){ return mix(2.*b*s + b*b*(1.-2.*s), sqrt(b)*(2.*s-1.) + 2.*b*(1.-s), step(.5,s)); }
+  vec2 cover(vec2 uv){ float rs=u_res.x/u_res.y, ri=u_img.x/u_img.y;
+    vec2 s = rs>ri ? vec2(1., ri/rs) : vec2(rs/ri, 1.); return (uv-.5)*s+.5; }
+
+  void main(){
+    vec2 uv = v_uv; float t = u_t;
+    // slow breathing zoom (also hides edges while warping)
+    float z = .955 + .008*sin(t*.07);
+    vec2 iuv = cover((uv-.5)*z+.5);
+    float top = 1. - iuv.y;                       // 1 = top of painting
+    vec2 q = iuv*vec2(u_img.x/u_img.y,1.)*2.4;
+    // domain-warped flow field: two layers for a swirling, painterly drift
+    vec2 f1 = vec2(fbm(q+vec2(t*.03,0.)), fbm(q+vec2(5.2,1.3)-vec2(0.,t*.03))) - .5;
+    vec2 f2 = vec2(fbm(q*1.7+f1*2.+t*.02), fbm(q*1.7-f1*2.+3.1-t*.02)) - .5;
+    float amp = u_motion*.013*mix(.45,1.,smoothstep(.2,.9,top));
+    iuv += (f1 + f2*.6)*amp;
+
+    vec3 c = texture2D(u_tex, iuv).rgb;
+
+    // glow from bright spots (lamps, windows, moon) — used at night
+    vec3 g = vec3(0.);
+    for(int i=0;i<8;i++){
+      float a = float(i)*.785398; vec2 o = vec2(cos(a),sin(a))*.012;
+      vec3 s = texture2D(u_tex, iuv+o).rgb;
+      g += s*smoothstep(.62,.95,dot(s,LUM));
+    }
+    g /= 8.;
+
+    // 1. exposure retarget: map the painting's own brightness to the time of day
+    c = pow(max(c,vec3(.0001)), vec3(u_k));
+    c = (c-.5)*u_con+.5;   // win back contrast lost by strong relighting
+    // 2. white balance / colour temperature
+    c *= u_gain * u_expo;   // overall light level: also dims highlights at night
+    // 3. saturation
+    float L = dot(c,LUM); c = mix(vec3(L), c, u_sat);
+    // 4. sky light, strongest at the top
+    float skyMask = smoothstep(.35,1.,top);
+    vec3 skyCol = mix(u_horizon, u_sky, smoothstep(.5,1.,top));
+    c = mix(c, softLight(clamp(c,0.,1.), skyCol), u_skyAmt*(.4+.6*skyMask));
+    // 5. warm glow
+    c += g*vec3(1.,.74,.42)*u_glow*1.5;
+    // 6. twinkling stars in dark parts of the sky
+    if(u_stars > .01){
+      vec2 sg = iuv*vec2(u_img.x/u_img.y,1.)*80.; vec2 cell = floor(sg); float h = hash(cell);
+      if(h > .982){
+        vec2 f = fract(sg)-.5-(vec2(hash(cell+1.7),hash(cell+3.1))-.5)*.6;
+        float tw = .45+.55*sin(t*(.8+h*2.5)+h*40.);
+        float s = smoothstep(.13,0.,length(f))*tw;
+        float dark = 1.-smoothstep(.08,.32,dot(c,LUM));
+        c += vec3(.9,.95,1.)*s*u_stars*skyMask*dark*1.3;
+      }
+    }
+    // 7. vignette + film grain
+    vec2 vv = uv-.5; c *= 1.-u_vig*dot(vv,vv)*2.2;
+    c += (hash(uv*u_res+fract(t*.37)*100.)-.5)*.022;
+    gl_FragColor = vec4(clamp(c,0.,1.),1.);
+  }`;
+
+  function sh(type, src){ const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+    if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+  const prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, VS)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, FS));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const aLoc = gl.getAttribLocation(prog, 'a'); gl.enableVertexAttribArray(aLoc); gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+  const U = {}; ['u_tex','u_res','u_img','u_t','u_expo','u_con','u_motion','u_k','u_sat','u_skyAmt','u_vig','u_stars','u_glow','u_gain','u_sky','u_horizon']
+    .forEach(n => U[n] = gl.getUniformLocation(prog, n));
+
+  const tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  let imgW = 16, imgH = 9, srcLuma = 0.45;
+
+  function setImage(source){
+    // downscale to max 2048 px for the GPU
+    const max = 2048, w0 = source.width, h0 = source.height, sc = Math.min(1, max/Math.max(w0,h0));
+    const c = document.createElement('canvas'); c.width = Math.round(w0*sc); c.height = Math.round(h0*sc);
+    c.getContext('2d').drawImage(source, 0, 0, c.width, c.height);
+    gl.bindTexture(gl.TEXTURE_2D, tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, c);
+    imgW = c.width; imgH = c.height;
+    // measure the painting's own average brightness
+    const m = document.createElement('canvas'); m.width = m.height = 64;
+    const mx = m.getContext('2d'); mx.drawImage(c, 0, 0, 64, 64);
+    const d = mx.getImageData(0,0,64,64).data; let s = 0;
+    for (let i = 0; i < d.length; i += 4) s += (0.299*d[i] + 0.587*d[i+1] + 0.114*d[i+2]) / 255;
+    srcLuma = Math.min(0.95, Math.max(0.03, s/(64*64)));
+    return c;
+  }
+
+  // ---------- default painting (procedural Dutch landscape) ----------
+  function defaultPainting(){
+    const W = 1600, H = 1000, c = document.createElement('canvas'); c.width = W; c.height = H;
+    const x = c.getContext('2d');
+    let seed = 7; const r = () => (seed = (seed*16807) % 2147483647) / 2147483647;
+    const sky = x.createLinearGradient(0,0,0,H*.62);
+    sky.addColorStop(0,'#3f6fa8'); sky.addColorStop(.6,'#8fb6d8'); sky.addColorStop(1,'#e8dcc0');
+    x.fillStyle = sky; x.fillRect(0,0,W,H);
+    const stroke = (cx,cy,len,wid,ang,col) => { x.save(); x.translate(cx,cy); x.rotate(ang); x.fillStyle = col;
+      x.beginPath(); x.ellipse(0,0,len,wid,0,0,Math.PI*2); x.fill(); x.restore(); };
+    // swirling sky strokes
+    for (let i = 0; i < 3200; i++){
+      const px = r()*W, py = r()*H*.62, ang = Math.sin(px*.004+py*.01)*1.2 + Math.cos(py*.006)*.6;
+      const k = py/(H*.62), l = 55 + k*30 + r()*14;
+      const hue = 212 - k*20 + (r()-.5)*16, sat = 45 - k*15 + r()*10;
+      stroke(px,py,10+r()*16,2.5+r()*2.5,ang,`hsla(${hue},${sat}%,${l}%,.55)`);
+    }
+    // clouds
+    for (let i = 0; i < 900; i++){
+      const cx = [380,1050,1350][i%3] + (r()-.5)*360, cy = [170,120,300][i%3] + (r()-.5)*90;
+      stroke(cx,cy,12+r()*18,4+r()*4,(r()-.5)*.6,`hsla(40,30%,${88+r()*10}%,.5)`);
+    }
+    // sun
+    for (let i = 0; i < 400; i++){ const a = r()*Math.PI*2, d = r()*70;
+      stroke(1240+Math.cos(a)*d, 230+Math.sin(a)*d, 8+r()*10, 3, a+1.57, `hsla(${45+r()*10},95%,${70+r()*20}%,.7)`); }
+    // fields
+    x.fillStyle = '#5f7a33'; x.fillRect(0, H*.6, W, H*.4);
+    const fields = [['#6f8f3c',.62],['#8a9a3a',.7],['#5c7a34',.8],['#a08a3c',.9]];
+    fields.forEach(([col,y0],j) => { for (let i = 0; i < 1400; i++){
+      const px = r()*W, py = H*y0 + r()*H*(.12) + Math.sin(px*.003+j)*20;
+      stroke(px,py,14+r()*18,3+r()*2,(r()-.5)*.3,col+'cc'); } });
+    // church tower (a nod to Gouda) and a windmill
+    x.fillStyle = '#2d2a2a';
+    x.fillRect(420,430,46,190); x.beginPath(); x.moveTo(410,432); x.lineTo(443,330); x.lineTo(476,432); x.fill();
+    x.fillRect(360,540,160,80);
+    x.fillStyle = '#ffd98a'; x.fillRect(437,470,12,22); x.fillRect(388,565,10,16); x.fillRect(480,565,10,16);
+    x.fillStyle = '#2d2a2a';
+    x.beginPath(); x.moveTo(1080,640); x.lineTo(1100,520); x.lineTo(1130,520); x.lineTo(1150,640); x.fill();
+    x.save(); x.translate(1115,520); x.rotate(.35);
+    for (let k = 0; k < 4; k++){ x.rotate(Math.PI/2); x.fillRect(-5,0,10,120); x.fillRect(5,30,16,90); }
+    x.restore();
+    x.fillStyle = '#ffd98a'; x.fillRect(1110,580,9,13);
+    // trees
+    for (let i = 0; i < 6; i++){ const tx = 620 + i*70 + r()*30, ty = 610;
+      for (let j = 0; j < 120; j++) stroke(tx+(r()-.5)*44, ty-40-r()*70, 7+r()*8, 3+r()*3, r()*3, `hsla(${95+r()*30},35%,${22+r()*15}%,.8)`); }
+    return c;
+  }
+
+  // ---------- sun position for Gouda ----------
+  function sun(date){
+    const rad = Math.PI/180;
+    const start = Date.UTC(date.getUTCFullYear(),0,0);
+    const doy = Math.floor((date - start)/86400000);
+    const hr = date.getUTCHours() + date.getUTCMinutes()/60;
+    const g = 2*Math.PI/365*(doy-1+(hr-12)/24);
+    const decl = .006918-.399912*Math.cos(g)+.070257*Math.sin(g)-.006758*Math.cos(2*g)+.000907*Math.sin(2*g)-.002697*Math.cos(3*g)+.00148*Math.sin(3*g);
+    const eqt = 229.18*(.000075+.001868*Math.cos(g)-.032077*Math.sin(g)-.014615*Math.cos(2*g)-.040849*Math.sin(2*g));
+    const tst = hr*60 + eqt + 4*LON;
+    const ha = (tst/4-180)*rad, lat = LAT*rad;
+    const cz = Math.sin(lat)*Math.sin(decl)+Math.cos(lat)*Math.cos(decl)*Math.cos(ha);
+    return { elev: 90 - Math.acos(Math.min(1,Math.max(-1,cz)))/rad, morning: ha < 0 };
+  }
+
+  // light keyframes by sun elevation (degrees)
+  const KEYS = [
+    { e:-18, expo:.42, L:.14, gain:[.70,.82,1.22], sat:.72, sky:[.05,.08,.25], hor:[.10,.12,.30], skyA:.55, vig:.60, stars:1,  glow:1   },
+    { e:-8,  expo:.62, L:.22, gain:[.84,.86,1.15], sat:.85, sky:[.22,.24,.55], hor:[.55,.40,.55], skyA:.50, vig:.42, stars:.35,glow:.7  },
+    { e:-2,  expo:.86, L:.32, gain:[1.12,.92,.92], sat:1.05,sky:[.55,.45,.70], hor:[.98,.58,.50], skyA:.48, vig:.30, stars:0,  glow:.35 },
+    { e:4,   expo:.96, L:.42, gain:[1.2,.97,.78], sat:1.18,sky:[.70,.70,.85], hor:[1.0,.72,.42], skyA:.42, vig:.24, stars:0,  glow:.08 },
+    { e:15,  expo:1,   L:.49, gain:[1.04,1.0,.95], sat:1.05,sky:[.80,.88,1.0], hor:[.98,.92,.82], skyA:.30, vig:.18, stars:0,  glow:0   },
+    { e:35,  expo:1.03, L:.53, gain:[1.0,1.0,1.0],  sat:1.0, sky:[.68,.84,1.0], hor:[.90,.94,1.0], skyA:.22, vig:.12, stars:0,  glow:0   },
+  ];
+  const lerp = (a,b,t) => a+(b-a)*t;
+  const lerpA = (a,b,t) => a.map((v,i) => lerp(v,b[i],t));
+  function lightFor(s){
+    const e = Math.max(KEYS[0].e, Math.min(KEYS[KEYS.length-1].e, s.elev));
+    let i = 0; while (i < KEYS.length-2 && e > KEYS[i+1].e) i++;
+    const a = KEYS[i], b = KEYS[i+1], t = (e-a.e)/(b.e-a.e);
+    const o = { expo:lerp(a.expo,b.expo,t), L:lerp(a.L,b.L,t), gain:lerpA(a.gain,b.gain,t), sat:lerp(a.sat,b.sat,t), sky:lerpA(a.sky,b.sky,t),
+      hor:lerpA(a.hor,b.hor,t), skyA:lerp(a.skyA,b.skyA,t), vig:lerp(a.vig,b.vig,t), stars:lerp(a.stars,b.stars,t), glow:lerp(a.glow,b.glow,t) };
+    // dawn is a little cooler and pinker than dusk
+    if (s.morning && s.elev > -10 && s.elev < 12){ o.gain = [o.gain[0]*.97, o.gain[1], o.gain[2]*1.06]; o.hor = [o.hor[0], o.hor[1]*.92, o.hor[2]*1.15]; }
+    return o;
+  }
+  function phaseName(s){
+    if (s.elev < -12) return 'Nacht';
+    if (s.elev < -4) return 'Blauw uur';
+    if (s.elev < 6) return s.morning ? 'Zonsopkomst' : 'Zonsondergang';
+    if (s.elev < 18) return s.morning ? 'Ochtend' : 'Avondlicht';
+    return s.morning ? 'Ochtend' : 'Middag';
+  }
+
+  // ---------- state & UI ----------
+  let live = true, motion = 1;
+  const slider = document.getElementById('timeSlider'), liveBtn = document.getElementById('live');
+  const clockT = document.getElementById('clockT'), clockPh = document.getElementById('clockPh');
+  const fmt = m => String(Math.floor(m/60)).padStart(2,'0') + ':' + String(m%60).padStart(2,'0');
+
+  function targetDate(){
+    const d = new Date();
+    if (!live){ const m = +slider.value; d.setHours(Math.floor(m/60), m%60, 0, 0); }
+    return d;
+  }
+  slider.addEventListener('input', () => { live = false; liveBtn.classList.remove('on'); });
+  liveBtn.addEventListener('click', () => { live = true; liveBtn.classList.add('on'); });
+  document.getElementById('motion').addEventListener('input', e => motion = +e.target.value);
+
+  const file = document.getElementById('file');
+  document.getElementById('pick').addEventListener('click', () => file.click());
+  file.addEventListener('change', () => file.files[0] && loadFile(file.files[0]));
+  function loadFile(f){
+    if (!f.type.startsWith('image/')) return;
+    const url = URL.createObjectURL(f), img = new Image();
+    img.onload = () => {
+      const c = setImage(img); URL.revokeObjectURL(url);
+      document.getElementById('sub').textContent = f.name.replace(/\.[^.]+$/,'');
+      try { // remember it for next time (this browser only)
+        const s = document.createElement('canvas'), sc = Math.min(1, 1600/Math.max(c.width,c.height));
+        s.width = c.width*sc; s.height = c.height*sc; s.getContext('2d').drawImage(c,0,0,s.width,s.height);
+        localStorage.setItem('levend-schilderij-img', s.toDataURL('image/jpeg', .85));
+        localStorage.setItem('levend-schilderij-name', document.getElementById('sub').textContent);
+      } catch(e) {}
+    };
+    img.src = url;
+  }
+  const drop = document.getElementById('drop');
+  addEventListener('dragover', e => { e.preventDefault(); drop.classList.add('show'); });
+  addEventListener('dragleave', e => { if (e.target === drop || !e.relatedTarget) drop.classList.remove('show'); });
+  addEventListener('drop', e => { e.preventDefault(); drop.classList.remove('show'); const f = e.dataTransfer.files[0]; if (f) loadFile(f); });
+
+  document.getElementById('fs').addEventListener('click', async () => {
+    try { document.fullscreenElement ? await document.exitFullscreen() : await document.documentElement.requestFullscreen(); } catch(e) {}
+  });
+
+  // auto-hide controls so it works as a picture frame
+  let idleT; const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => document.body.classList.add('idle'), 3500); };
+  ['mousemove','touchstart','keydown','pointerdown'].forEach(ev => addEventListener(ev, wake, { passive: true })); wake();
+
+  // initial image: remembered upload, else the default landscape
+  let restored = false;
+  try {
+    const saved = localStorage.getItem('levend-schilderij-img');
+    if (saved){ const im = new Image(); im.onload = () => setImage(im); im.src = saved; restored = true;
+      document.getElementById('sub').textContent = localStorage.getItem('levend-schilderij-name') || 'Je schilderij'; }
+  } catch(e) {}
+  setImage(defaultPainting());
+  if (!restored) document.getElementById('sub').textContent = 'Een Hollands landschap · upload je eigen schilderij';
+
+  // ---------- render loop ----------
+  let cur = null;
+  function resize(){
+    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const w = Math.round(innerWidth*dpr), h = Math.round(innerHeight*dpr);
+    if (cv.width !== w || cv.height !== h){ cv.width = w; cv.height = h; gl.viewport(0,0,w,h); }
+  }
+  const t0 = performance.now();
+  function frame(now){
+    resize();
+    const d = targetDate(), s = sun(d), tgt = lightFor(s);
+    const m = d.getHours()*60 + d.getMinutes();
+    if (live) slider.value = m;
+    clockT.textContent = fmt(m); clockPh.textContent = phaseName(s);
+    // ease towards the target light so scrubbing feels smooth
+    if (!cur) cur = JSON.parse(JSON.stringify(tgt));
+    const dt = Math.min(.25, (now - (frame.last || now))/1000); frame.last = now;
+    const ease = 1 - Math.exp(-dt*3.5);
+    for (const k in tgt) cur[k] = Array.isArray(tgt[k]) ? lerpA(cur[k], tgt[k], ease) : lerp(cur[k], tgt[k], ease);
+    const k = Math.min(2.5, Math.max(.3, Math.log(cur.L)/Math.log(srcLuma)));
+
+    gl.uniform1i(U.u_tex, 0);
+    gl.uniform2f(U.u_res, cv.width, cv.height); gl.uniform2f(U.u_img, imgW, imgH);
+    gl.uniform1f(U.u_t, (now - t0)/1000); gl.uniform1f(U.u_motion, motion);
+    gl.uniform1f(U.u_k, k); gl.uniform1f(U.u_con, 1 + Math.max(0, 1-k)*.55); gl.uniform1f(U.u_expo, cur.expo); gl.uniform1f(U.u_sat, cur.sat * (1 + Math.max(0, 1-k)*.35)); gl.uniform1f(U.u_skyAmt, cur.skyA);
+    gl.uniform1f(U.u_vig, cur.vig); gl.uniform1f(U.u_stars, cur.stars); gl.uniform1f(U.u_glow, cur.glow);
+    gl.uniform3fv(U.u_gain, cur.gain); gl.uniform3fv(U.u_sky, cur.sky); gl.uniform3fv(U.u_horizon, cur.hor);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
