@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .DS_Store
 Thumbs.db
+
+# film: tussenbestanden (masters)
+film/_master-*.mp4
+film/*.mp4

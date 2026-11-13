@@ -50,51 +50,88 @@ vec3 roomLight(vec2 w, vec3 tvCol) {
   return L;
 }
 
-// buiten: avondlucht boven Goudse geveltjes, met sneeuw
-vec3 outside(vec2 o) {   // o: 0..1 over het glas (x rechts, y omlaag)
-  vec3 sky = mix(vec3(.025, .04, .10), vec3(.11, .12, .21), smoothstep(.0, .62, o.y));
-  sky += vec3(.16, .10, .08) * smoothstep(.45, .75, o.y) * .6;          // stadsgloed laag aan de hemel
-  vec3 c = sky;
-  // geveltjes aan de overkant: elk huis een eigen breedte, hoogte en gevelvorm
-  float hx = o.x * 4.6 + .35, cell = floor(hx), fx = fract(hx);
-  float hh = .50 + .12 * hash(vec2(cell, 1.)) ;                          // dakvoet
-  float gable = hash(vec2(cell, 2.));
-  float top = hh - .12 - .06 * hash(vec2(cell, 3.));
-  float roof;
-  if (gable < .45) roof = mix(hh, top, 1. - abs(fx - .5) * 2.);        // puntgevel
-  else roof = mix(hh, top, step(abs(fx - .5), .5 - .14 * floor(abs(fx - .5) * 7.) / 2.) ); // trapgevel
-  roof = gable < .45 ? max(roof, hh - (.5 - abs(fx - .5)) * .5) : roof;
-  float house = step(roof, o.y);
-  vec3 hc = vec3(.045, .045, .065) * (.8 + .4 * hash(vec2(cell, 5.)));
-  // sneeuw op de daklijn
-  float snowRoof = smoothstep(.022, .0, o.y - roof) * house;
-  hc = mix(hc, vec3(.50, .56, .72), snowRoof * .85);
-  // verlichte ramen (warm), in een raster per huis
-  vec2 wg = vec2(fx * 4., (o.y - hh) * 11.);
+// een rij grachtenpanden: puntgevels, trapgevels en klokgevels, sneeuw op de daklijn, warme ramen.
+// q in wereldmaat (glas: 1,0 breed, 2,3 hoog), w = breedte per pand, eave = dakvoet, ground = straat
+vec4 houses(vec2 q, float w, float eave, float ground, float seed) {
+  float hx = q.x / w + seed, cell = floor(hx), fx = fract(hx);
+  float ev = eave + (hash(vec2(cell, seed + 1.)) - .5) * .09;
+  float gh = .2 + .14 * hash(vec2(cell, seed + 2.));
+  float type = hash(vec2(cell, seed + 3.));
+  float e = .5 - abs(fx - .5);                         // 0 aan de rand, .5 in het midden
+  float top;
+  if (type < .33) top = ev - gh * e * 2.;                                        // puntgevel
+  else if (type < .7) top = ev - gh * min(1., floor(e * 2. * 3.999 + .35) / 3.); // trapgevel
+  else top = ev - gh * (smoothstep(.06, .30, e) * .8 + step(.36, e) * .2);       // klokgevel
+  float body = step(top, q.y) * step(q.y, ground) * step(.012, fx) * step(fx, .988);
+  vec3 c = vec3(.050, .048, .066) * (.75 + .5 * hash(vec2(cell, seed + 5.)));
+  // ramen: drie kolommen per verdieping, één in de gevel
+  vec2 wg = vec2(fx * 3., (q.y - ev - .05) / .2);
   vec2 wc = floor(wg), wf = fract(wg);
-  float isWin = step(.25, wf.x) * step(wf.x, .75) * step(.2, wf.y) * step(wf.y, .8) * step(0., o.y - hh - .02) * step(wc.x, 2.5) * step(.5, wc.x);
-  float lit = step(.45, hash(wc + cell * 7.3));
-  hc = mix(hc, vec3(1., .72, .38) * (.65 + .35 * hash(wc + cell)), isWin * lit * .9);
-  c = mix(c, hc, house);
-  // straat en gracht met sneeuw onderaan
-  c = mix(c, vec3(.30, .34, .46) * (.8 + .2 * noise(o * 40.)), smoothstep(.86, .9, o.y));
-  // lantaarn
-  vec2 lp = vec2(.27, .66);
-  c += vec3(1., .75, .45) * .35 * exp(-dot((o - lp) * vec2(1.6, 1.), (o - lp) * vec2(1.6, 1.)) * 70.);
+  float inBody = step(0., q.y - ev - .05) * step(q.y, ground - .16);
+  float win = step(.3, wf.x) * step(wf.x, .7) * step(.18, wf.y) * step(wf.y, .78) * inBody;
+  vec2 gw = vec2(abs(fx - .5), q.y - (ev - gh * .45));
+  win += step(gw.x, .07) * step(abs(gw.y), .055) * step(.33, type);
+  float lit = step(.48, hash(wc + cell * 7.31 + seed));
+  vec3 warm = vec3(1., .70, .36) * (.6 + .4 * hash(wc + cell + seed * 3.));
+  c = mix(c, mix(vec3(.07, .08, .13), warm, lit), clamp(win, 0., 1.) * .95);
+  // sneeuw op de daklijn en de vensterbankjes
+  float rim = smoothstep(.018, .0, q.y - top) * body;
+  float sill = step(.78, wf.y) * step(wf.y, .84) * step(.27, wf.x) * step(wf.x, .73) * inBody;
+  c = mix(c, vec3(.55, .60, .76), max(rim, sill * .7));
+  return vec4(c, body);
+}
+
+// buiten: avondlucht boven Goudse grachtenpanden, een besneeuwde kade en het water, met sneeuw
+vec3 outside(vec2 o) {   // o: 0..1 over het glas (x rechts, y omlaag)
+  vec2 q = o * (WIN_H * 2. - .09);
+  vec3 sky = mix(vec3(.022, .035, .095), vec3(.12, .13, .22), smoothstep(.0, 1.4, q.y));
+  sky += vec3(.18, .11, .08) * smoothstep(.9, 1.45, q.y) * .55;         // stadsgloed laag aan de hemel
+  vec3 c = sky;
+  // achterste rij: kleiner en nevelig
+  vec4 far = houses(q, .16, 1.24, 1.76, 11.);
+  c = mix(c, mix(far.rgb, sky * 1.1 + vec3(.02, .02, .03), .45), far.a);
+  // voorste rij aan de overkant van de gracht
+  vec4 near = houses(q, .27, 1.36, 1.76, 3.);
+  c = mix(c, near.rgb, near.a);
+  // kade met sneeuw
+  float quay = step(1.76, q.y) * step(q.y, 1.86);
+  c = mix(c, vec3(.40, .45, .60) * (.85 + .2 * noise(q * vec2(40., 90.))), quay);
+  // gracht: donker water met de spiegeling van de verlichte ramen
+  if (q.y > 1.86) {
+    // spiegeling: zacht en uitgerekt (drie monsters naast elkaar, rimpels die langzaam bewegen)
+    float rip = (noise(vec2(q.x * 5., q.y * 45. - u_wt * .5)) - .5) * .04;
+    float my = 1.74 - (q.y - 1.86) * .55;
+    vec3 refl = vec3(0.);
+    for (int k = -1; k <= 1; k++) {
+      vec4 h = houses(vec2(q.x + rip + float(k) * .012, my), .27, 1.36, 1.76, 3.);
+      refl += h.rgb * h.a / 3.;
+    }
+    float glint = .6 + .4 * noise(vec2(q.x * 20., q.y * 120. - u_wt * .8));
+    c = vec3(.03, .04, .08) + refl * .4 * glint * smoothstep(2.3, 1.9, q.y);
+  }
+  // lantaarn op de kade
+  vec2 lp = vec2(.28, 1.40);
+  float pole = step(abs(q.x - lp.x), .006) * step(lp.y, q.y) * step(q.y, 1.80);
+  c = mix(c, vec3(.03), pole);
+  float lg = length((q - lp) * vec2(1., 1.2));
+  c += vec3(1., .74, .42) * (smoothstep(.022, .008, lg) * .9 + exp(-lg * lg * 220.) * .35);
+  // sneeuwnevel: de verte vervaagt een beetje
+  c = mix(c, vec3(.20, .22, .32), .18 * smoothstep(.6, 1.7, q.y) * u_snow);
   // sneeuwvlokken: drie lagen, dezelfde snelheid en klok als op het doek
   for (int l = 0; l < 3; l++) {
     float fl = float(l), sc = 1. + fl * .8;
-    vec2 S = o * vec2(1.6, 3.4);
+    vec2 S = q * .75;
     S.x -= u_wind * u_wt * .035 / sc + sin(u_wt * .45 + S.y * 5. + fl * 2.) * .012;
     S.y -= u_wt * (.075 / sqrt(sc));
-    vec2 g = S / (.055 / sc), ce = floor(g), f = fract(g) - .5;
+    vec2 g = S / (.05 / sc), ce = floor(g), f = fract(g) - .5;
     float h = hash(ce + fl * 31. + 9.);
     if (h < .12 + .5 * u_snow) {
       vec2 off = (vec2(hash(ce + 1.3), hash(ce + 2.9)) - .5) * .5;
       off.x += sin(u_wt * (.6 + h) + h * 20.) * .12;
-      float r = (.075 + .06 * hash(ce + 4.4)) * (1. - fl * .12);
+      float r = (.08 + .06 * hash(ce + 4.4)) * (1. - fl * .12);
       float a = smoothstep(r, r * .35, length((f - off) * vec2(1., 1.2)));
-      c = mix(c, vec3(.82, .86, .96), a * (.85 - fl * .2) * min(1., u_snow * 2.));
+      float nearLamp = exp(-dot(q - lp, q - lp) * 30.);
+      c = mix(c, vec3(.80, .84, .95) + vec3(.3, .15, 0.) * nearLamp, a * (.8 - fl * .2) * min(1., u_snow * 2.));
     }
   }
   return c;
@@ -155,9 +192,17 @@ void main() {
   for (int i = 0; i < 3; i++) {
     float fi = float(i);
     vec2 tp = w - vec2(1.14 + fi * .05 - .05, .80);
-    float bend = tp.y * tp.y * (1.2 - fi * .7);
-    float twig = fill(abs(tp.x + bend * .5 - (fi - 1.) * .12 * tp.y) - .0035, aa) * step(-.30 + fi * .05, tp.y) * step(tp.y, 0.);
-    c = mix(c, vec3(.16, .11, .07) * L, twig);
+    // gebogen takjes die uit de vaas waaieren, met een paar blaadjes
+    float sp = (fi - 1.) * .55;
+    float bx = tp.x + sp * tp.y + tp.y * tp.y * sp * .9;
+    float len = -(.36 + .08 * fi);
+    float twig = fill(abs(bx) - .0035, aa) * step(len, tp.y) * step(tp.y, 0.);
+    for (int k = 0; k < 3; k++) {
+      float yk = len * (.45 + .2 * float(k));
+      vec2 lv = vec2(bx - (k == 1 ? -.02 : .02), tp.y - yk);
+      twig = max(twig, fill(length(lv * vec2(1., 2.2)) - .016, aa));
+    }
+    c = mix(c, vec3(.17, .12, .08) * L * 1.2, twig);
   }
   float by = 1.08;
   float b1 = fill(sdBox(w - vec2(-.95, by - .025), vec2(.26, .025)), aa);

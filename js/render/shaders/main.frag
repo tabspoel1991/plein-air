@@ -133,6 +133,10 @@ void main() {
     if (ml < 1.25) {
       float jag = (noise(md * 5. + 3.7) - .5) * .14;                     // rafelige penseelrand
       float diskK = smoothstep(1.1, .98, ml + jag * .6) * (1. - smoothstep(.2, .55, u_day)) * (1. - u_moonOrig); // overdag: geen donkere schijf
+      // achter wolken of mist: de nieuwe schijf verdwijnt mee (zelfde wolkenvlekken als de lucht)
+      vec2 cd0 = vec2(-u_wt * .004 * (.4 + abs(u_wind)) * sign(u_wind + .001), 0.);
+      float mcn = noise(u_moonDisk.xy * vec2(2.4, 4.2) + cd0) * .65 + noise(u_moonDisk.xy * vec2(6., 9.) + cd0 * 1.7) * .35;
+      diskK *= (1. - smoothstep(mcn - .22, mcn + .22, u_cloud) * .92) * (1. - u_fog * .85);
       float limb = smoothstep(1.04, .97, ml + jag * .5);                  // binnen de maanrand
       float sy = sqrt(max(0., 1. - md.y * md.y));
       float mph = u_moonPhase;

@@ -40,7 +40,7 @@ export function state(t) {
   s.still = 1 - smooth(seg(t, 6.0, 8.6));
   s.contain = keys(t, [[0, 1.78], [5.6, 1.6, 'lin'], [9.8, 0]]);   // hele doek → vullend beeld (langzame push-in)
   s.wake = t < 6.2 ? 0.0001 : t > 10.5 ? 0 : .05 + 1.7 * smooth(seg(t, 6.3, 10.2)); // straal (0 = overal)
-  s.moonOrig = 1 - smooth(seg(t, 39.6, 42));   // de echte maanfase verschijnt in de sneeuwnacht
+  s.moonOrig = 1 - smooth(seg(t, 39.8, 41.0));   // de echte maanfase verschijnt in de sneeuwnacht
   s.pan = keys(t, [[0, 0], [38.5, 0], [40.5, -.07], [47, -.07], [48, -.02]]); // in de sneeuwnacht iets omhoog: maan in beeld
 
   // weer
@@ -59,7 +59,7 @@ export function state(t) {
   // kamer: langzame uitzoom (47 → 53,5), daarna even stil
   const z = smoother(seg(t, 47, 53.5));
   s.room = t >= 47 && t < 55.5;
-  s.cam = [ .58 * z, .30 * z, 1 + 2.75 * (z * .82 + .18 * z * z) ];
+  s.cam = [ .50 * z, .30 * z, 1 + 2.6 * (z * .82 + .18 * z * z) ];
 
   // zwart: in vanuit zwart, uit naar de titelkaart, en het einde
   s.black = Math.max(1 - smooth(seg(t, 0, 1.6)), smooth(seg(t, 54.3, 55.2)));
