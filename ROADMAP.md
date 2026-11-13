@@ -19,9 +19,10 @@
 - Later: AI-segmentatie; een eigen upload krijgt nu alleen een simpele lucht/land-verdeling
 
 ## 3. Beweging per element
-- [ ] Wervels in de lucht draaien mee met hun penseelrichting
-- [ ] Sterren en maan pulseren
-- [ ] Cipres wiegt, dorp staat stil
+- [x] Wervels in de lucht draaien mee met hun penseelrichting (flow field `assets/masks/flow.png`, gemeten uit de streken)
+- [x] Sterren en maan pulseren: de krans ademt en licht zacht op, elk in een eigen ritme
+- [x] Cipres wiegt (meer naar de top) met vlammende golfjes; dorp en heuvels staan bijna stil
+- [x] Alles volgt de motion-slider
 
 ## 4. Dag ↔ nacht per element
 - [ ] Lucht: donkerblauw → daglucht, penseelstreken blijven zichtbaar

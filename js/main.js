@@ -22,6 +22,7 @@ function setPainting(source, title, sc) {
   scene = sc;
   renderer.setTexture('u_maskA', 1, sc.maskA);
   renderer.setTexture('u_maskB', 2, sc.maskB);
+  renderer.setTexture('u_flow', 3, sc.flow);
   ui.setTitle(title);
 }
 
@@ -48,6 +49,8 @@ async function start() {
       ...motion.update(ui.motion, dt),
       ...relightUniforms(profile, srcLuma),
       u_debug: ui.debug ? 1 : 0,
+      'u_star[0]': scene.starData, u_starCount: scene.stars.length,
+      u_moon: scene.moon ? [scene.moon.x, scene.moon.y, scene.moon.r] : [-1, -1, 0],
     };
     renderer.setUniforms(uniforms);
     window.__levend = { uniforms, profile, sun, ui }; // alleen voor testen/debuggen

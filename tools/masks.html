@@ -14,12 +14,13 @@
 </head>
 <body>
 <h1>Masks voor De Sterrennacht</h1>
-<p>Genereert de masks automatisch (kleur, helderheid, positie). <b>Opslaan overschrijft</b> de PNG's in <code>assets/masks/</code>, ook als je ze met de hand hebt bijgewerkt.</p>
+<p>Genereert de masks automatisch (kleur, helderheid, positie) en het flow field (<code>flow.png</code>: richting van de penseelstreken). <b>Opslaan overschrijft</b> de PNG's in <code>assets/masks/</code>, ook als je ze met de hand hebt bijgewerkt.</p>
 <button id="gen">Genereer</button> <button id="save" disabled>Opslaan in assets/masks/</button>
 <div id="log"></div>
 <div class="grid" id="grid"></div>
 <script type="module">
 import { generateMasks, maskToCanvas, MASK_NAMES } from '../js/scene/autoMasks.js';
+import { generateFlow } from '../js/scene/flowField.js';
 import { loadImage, DEFAULT_PAINTING } from '../js/input/image.js';
 
 const log = t => document.getElementById('log').textContent += t + '\n';
@@ -32,6 +33,7 @@ async function gen() {
   const r = generateMasks(img);
   const canvases = {};
   for (const n of MASK_NAMES) canvases[n] = maskToCanvas(r.masks[n], r.width, r.height);
+  canvases.flow = generateFlow(img, r).canvas;
   for (const n in canvases) {
     const f = document.createElement('figure'); f.appendChild(canvases[n]);
     const c = document.createElement('figcaption'); c.textContent = n + '.png'; f.appendChild(c);

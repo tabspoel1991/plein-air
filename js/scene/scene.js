@@ -10,6 +10,8 @@ import { loadImage } from '../input/image.js';
 
 export const MASK_DIR = 'assets/masks/';
 export const MAX_STARS = 16;
+// geen flow.png: overal een zachte drift naar rechts
+const FLAT_FLOW = { data: new Uint8Array([255, 128, 70, 255]), width: 1, height: 1 };
 
 function grayFromImage(img, w, h) {
   const c = document.createElement('canvas'); c.width = w; c.height = h;
@@ -42,9 +44,9 @@ export async function loadScene() {
   try {
     const meta = await (await fetch(MASK_DIR + 'scene.json')).json();
     const w = meta.width, h = meta.height;
-    const imgs = await Promise.all(MASK_NAMES.map(n => loadImage(MASK_DIR + n + '.png')));
+    const [flow, ...imgs] = await Promise.all([loadImage(MASK_DIR + 'flow.png').catch(() => null), ...MASK_NAMES.map(n => loadImage(MASK_DIR + n + '.png'))]);
     const masks = {}; MASK_NAMES.forEach((n, i) => { masks[n] = grayFromImage(imgs[i], w, h); });
-    return { ...pack(masks, w, h), stars: meta.stars || [], starData: starArray(meta.stars || []), moon: meta.moon, source: 'masks' };
+    return { ...pack(masks, w, h), flow: flow || FLAT_FLOW, stars: meta.stars || [], starData: starArray(meta.stars || []), moon: meta.moon, source: 'masks' };
   } catch (e) {
     console.warn('Geen masks gevonden, val terug op simpele verdeling', e);
     return genericScene();
@@ -59,5 +61,5 @@ export function genericScene() {
     const v = y / h, t = Math.min(1, Math.max(0, (0.62 - v) / 0.12)), s = Math.round(t * t * (3 - 2 * t) * 255);
     masks.sky[y * w + x] = s; masks.hills[y * w + x] = 255 - s;
   }
-  return { ...pack(masks, w, h), stars: [], starData: starArray([]), moon: null, source: 'generic' };
+  return { ...pack(masks, w, h), flow: FLAT_FLOW, stars: [], starData: starArray([]), moon: null, source: 'generic' };
 }

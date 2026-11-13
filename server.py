@@ -52,8 +52,13 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         pass  # stil houden
 
 
+class Server(http.server.ThreadingHTTPServer):
+    request_queue_size = 128  # de browser vraagt ~20 bestanden tegelijk; standaard (5) gaf weigeringen
+    daemon_threads = True
+
+
 if __name__ == "__main__":
-    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), partial(Handler, directory=ROOT))
+    server = Server(("127.0.0.1", PORT), partial(Handler, directory=ROOT))
     print(f"Levend Schilderij draait op http://localhost:{PORT}/  (Ctrl+C om te stoppen)")
     try:
         server.serve_forever()
