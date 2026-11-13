@@ -1,6 +1,7 @@
 // main — verbindt de modules: input → scene → time + weather → motion/relight → render, met ui eromheen.
 import { DEFAULT_PAINTING, loadImage, loadImageFile, toCanvas, measureLuma } from './input/image.js';
 import { sunPosition } from './time/sun.js';
+import { moonPhase } from './time/moon.js';
 import { lightProfile, phaseName, easeProfile } from './time/profile.js';
 import { relightUniforms } from './relight/relight.js';
 import { createMotion } from './motion/motion.js';
@@ -67,7 +68,7 @@ async function start() {
     const uniforms = {
       u_res: res, u_img: imgSize, u_t: (now - t0) / 1000,
       ...motion.update(motionValue, dt),
-      ...relightUniforms(profile, scene),
+      ...relightUniforms(profile, scene, params.has('moon') ? +params.get('moon') : moonPhase(date).phase),
       ...weatherUniforms(w),
       u_debug: ui.debug ? 1 : 0,
       'u_star[0]': scene.starData, u_starCount: scene.stars.length,

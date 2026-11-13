@@ -29,6 +29,10 @@ uniform vec3 u_glowCol;
 // weather (0..1), weerklok u_wt, wind: + = naar rechts op het doek
 uniform float u_wt, u_cloud, u_rain, u_snow, u_snowCover, u_fog, u_wind;
 
+// maanfase: schijf (x, y, straal in hoogte-eenheden) en fase 0..1 (0 = nieuw, .5 = vol)
+uniform vec3 u_moonDisk;
+uniform float u_moonPhase;
+
 const vec3 LUM = vec3(0.299, 0.587, 0.114);
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -110,6 +114,37 @@ void main() {
 
   // ---------- RELIGHT ----------
   vec3 orig = c;
+
+  // --- MAANFASE: de schijf opnieuw geschilderd met de streken van de krans; de krans zelf blijft ---
+  if (u_moonDisk.z > 0.) {
+    vec2 md = (iuv - u_moonDisk.xy) * vec2(aspect, 1.) / u_moonDisk.z;   // eenheidsschijf
+    float ml = length(md);
+    if (ml < 1.25) {
+      float jag = (noise(md * 5. + 3.7) - .5) * .14;                     // rafelige penseelrand
+      float diskK = smoothstep(1.1, .98, ml + jag * .6);                  // schijf loopt net voorbij de rand
+      float limb = smoothstep(1.04, .97, ml + jag * .5);                  // binnen de maanrand
+      float sy = sqrt(max(0., 1. - md.y * md.y));
+      float mph = u_moonPhase;
+      // terminator: wassend licht rechts, afnemend licht links (noordelijk halfrond)
+      float lit = mph < .5 ? smoothstep(-.07, .07, md.x + jag - sy * .9 * cos(6.2832 * mph))
+                           : smoothstep(.07, -.07, md.x + jag - sy * .9 * cos(6.2832 * (mph - .5)));
+      lit *= limb;
+      // penseelstreken: de schijf leent de ronddraaiende streken van de krans (polaire afbeelding)
+      float ang = atan(md.y, md.x) + 1.3;
+      vec2 rp = u_moonDisk.xy + vec2(cos(ang), sin(ang)) * (1.35 + ml * .55) * u_moonDisk.z / vec2(aspect, 1.);
+      vec3 ring = texture2D(u_tex, rp).rgb;
+      float Ls = dot(ring, LUM);
+      // licht deel: goudgeel, warmer naar binnen, lichter naar de rand
+      vec3 litC = mix(vec3(.96, .64, .10), vec3(1., .88, .40), smoothstep(.4, .8, Ls)) * (.9 + .5 * (Ls - .55));
+      litC += (ring - vec3(Ls)) * .25;
+      litC = mix(litC, vec3(1., .95, .66), smoothstep(.6, 1., ml) * .22);
+      // donker deel: diep nachtblauw met een vleugje aardschijn
+      vec3 darkC = vec3(.12, .19, .38) * (.6 + Ls * .9) + (ring - vec3(Ls)) * .3 + vec3(.04, .05, .03);
+      orig = clamp(mix(orig, mix(darkC, litC, lit), diskK), 0., 1.);  // >1 geeft NaN in pow() verderop
+      c = orig;
+    }
+  }
+
   vec4 mA = texture2D(u_maskA, iuv), mB = texture2D(u_maskB, iuv);
   float sky = mA.r, starM = mA.g, moonM = mA.b, cyp = mA.a;
   float vil = mB.r, win = mB.g, hil = mB.b;

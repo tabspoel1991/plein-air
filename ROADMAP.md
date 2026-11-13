@@ -53,7 +53,9 @@
 
 
 ## 8. Echte maanfase
-- [ ] De maan toont de fase van vandaag, geschilderd in de stijl van het origineel (krans blijft)
+- [x] De maan toont de fase van vandaag (`js/time/moon.js`), geschilderd met de ronddraaiende streken van de eigen krans; de krans blijft
+- [x] Testen: `?moon=0..1` (0 = nieuw, 0,25 = eerste kwartier, 0,5 = vol, 0,75 = laatste kwartier)
+- Overdag staat de maan als bleke schijf in de lucht; in 16:9 valt de bovenkant van de maan net buiten beeld
 
 ## 9. Demo-modus (`?demo`)
 - [ ] Gescripte film van 60 s met eigen klok, deterministisch, frame voor frame bestuurbaar
