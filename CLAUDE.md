@@ -1,4 +1,5 @@
-# Levend Schilderij
+# Plein Air
+(mapnaam: "Levend schilderij")
 
 ## Visie
 Een webapp die een schilderij laat leven. Het beweegt subtiel en het licht volgt de echte tijd van de dag in Gouda.

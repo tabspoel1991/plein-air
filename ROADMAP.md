@@ -1,4 +1,4 @@
-# Roadmap
+# Roadmap · Plein Air
 
 ## 0. Fundament
 - [x] prototype.html opsplitsen in de modules uit CLAUDE.md (index.html is het startpunt, shaders in eigen bestanden)
@@ -43,7 +43,28 @@
 - [x] Robuust voor dagenlang draaien: shader valt terug op lagere precisie op oude GPU's, pagina ververst elke nacht om 04:00
 - Nog niet getest op een echte oude tablet of tv
 
+## 7. Echt weer in Gouda
+- [x] Actueel weer van Open-Meteo, elke 15 minuten; zonder internet: laatst bekende weer, anders helder
+- [x] Bewolking, regen (motregen/bui), sneeuw (blijft liggen), mist — als penseelstreken
+- [x] Vloeiende overgangen tussen weertypen
+- [x] Wind stuurt de beweging ("Auto (wind)"), zelf schuiven overschrijft
+- [x] Testknop: `?weather=rain|snow|fog|cloudy|clear` (extra: `drizzle`, `storm`); `?time=13:00` = vaste tijd, `?cover=0.7` = sneeuwdek, `?clean` = zonder knoppen
+- Sneeuwdek groeit in ~10 min echte sneeuw en smelt in een half uur (dooi) tot twee uur (vorst)
+
+
+## 8. Echte maanfase
+- [ ] De maan toont de fase van vandaag, geschilderd in de stijl van het origineel (krans blijft)
+
+## 9. Demo-modus (`?demo`)
+- [ ] Gescripte film van 60 s met eigen klok, deterministisch, frame voor frame bestuurbaar
+- [ ] Bijschriften en titelkaart
+- [ ] Kamershot: het doek als tv-frame in een woonkamer, sneeuw buiten synchroon
+
+## 10. Film renderen
+- [ ] Muziek: Satie, Gymnopédie No. 1 (vrije licentie, bron in CREDITS.md)
+- [ ] Frame voor frame renderen naar ffmpeg; conceptversie bekeken en verbeterd
+- [ ] `film/plein-air-demo-4k.mp4`, `film/plein-air-demo-1080p.mp4`, 3 stills
+
 ## Later
-- Weer in Gouda (regen, bewolking)
 - Seizoenen
 - Andere schilderijen

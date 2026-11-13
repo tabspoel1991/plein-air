@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Levend Schilderij</title>
+<title>Plein Air</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600&family=Inter:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
@@ -12,7 +12,7 @@
 <canvas id="gl"></canvas>
 
 <div class="title">
-  <h1>Levend Schilderij</h1>
+  <h1>Plein Air</h1>
   <p id="sub">Het licht volgt de echte tijd in Gouda</p>
 </div>
 
@@ -31,6 +31,8 @@
     <label for="motion">Beweging</label>
     <input type="range" id="motion" class="small" min="0" max="1" step="0.01" value="0.5">
   </div>
+  <button id="autoWind" class="on" title="De wind in Gouda stuurt de beweging">Auto (wind)</button>
+  <div class="clock wx"><span class="ph" id="wx">&nbsp;</span></div>
   <button id="fs">Volledig scherm</button>
   <button id="frameBtn" title="Lijst-modus: alleen het schilderij (toets F)">Lijst</button>
 </div>

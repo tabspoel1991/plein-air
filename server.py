@@ -1,4 +1,4 @@
-"""Kleine lokale dev server voor Levend Schilderij (alleen Python standaardbibliotheek).
+"""Kleine lokale dev server voor Plein Air (alleen Python standaardbibliotheek).
 
 Start:  start.bat   (of: python server.py 8000)
 Serveert de map als website op http://localhost:8000 en zet caching uit,
@@ -60,7 +60,7 @@ class Server(http.server.ThreadingHTTPServer):
 
 if __name__ == "__main__":
     server = Server(("127.0.0.1", PORT), partial(Handler, directory=ROOT))
-    print(f"Levend Schilderij draait op http://localhost:{PORT}/  (Ctrl+C om te stoppen)")
+    print(f"Plein Air draait op http://localhost:{PORT}/  (Ctrl+C om te stoppen)")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

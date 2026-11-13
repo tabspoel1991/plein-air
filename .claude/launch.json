@@ -3,9 +3,16 @@
   "configurations": [
     {
       "name": "levend-schilderij",
-      "runtimeExecutable": "C:\\Users\\takea\\AppData\\Local\\Programs\\Python\\Python312\\python.exe",
+      "runtimeExecutable": "C:/Users/takea/AppData/Local/Programs/Python/Python312/python.exe",
       "runtimeArgs": ["server.py", "8000"],
       "port": 8000
+    },
+    {
+      "name": "plein-air-dev",
+      "runtimeExecutable": "C:/Users/takea/AppData/Local/Programs/Python/Python312/python.exe",
+      "runtimeArgs": ["server.py", "8011"],
+      "port": 8011,
+      "autoPort": false
     }
   ]
 }

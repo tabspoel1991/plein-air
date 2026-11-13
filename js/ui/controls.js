@@ -4,12 +4,20 @@ const $ = id => document.getElementById(id);
 const fmt = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
 export function initUI({ onFile }) {
-  const state = { live: true, minutes: 720, motion: +$('motion').value };
+  const state = { live: true, minutes: 720, motion: +$('motion').value, autoMotion: true };
   const slider = $('timeSlider'), liveBtn = $('live');
+  // ?time=13:00 → vaste tijd (handig om te testen)
+  const tq = new URLSearchParams(location.search).get('time');
+  if (tq && /^\d{1,2}:\d{2}$/.test(tq)) { const [h, m] = tq.split(':').map(Number); state.live = false; state.minutes = h * 60 + m; liveBtn.classList.remove('on'); }
 
   slider.addEventListener('input', () => { state.live = false; state.minutes = +slider.value; liveBtn.classList.remove('on'); });
   liveBtn.addEventListener('click', () => { state.live = true; liveBtn.classList.add('on'); });
-  $('motion').addEventListener('input', e => { state.motion = +e.target.value; });
+  // beweging: standaard stuurt de wind; zelf schuiven overschrijft dat
+  const autoBtn = $('autoWind');
+  $('motion').addEventListener('input', e => { state.motion = +e.target.value; state.autoMotion = false; autoBtn.classList.remove('on'); });
+  autoBtn.addEventListener('click', () => { state.autoMotion = true; autoBtn.classList.add('on'); });
+  state.showMotion = v => { if (state.autoMotion) $('motion').value = Math.min(1, v); };
+  state.showWeather = text => { $('wx').textContent = text; };
 
   const file = $('file');
   $('pick').addEventListener('click', () => file.click());
@@ -58,6 +66,7 @@ export function initUI({ onFile }) {
   });
   document.addEventListener('visibilitychange', () => { if (state.frame && document.visibilityState === 'visible') keepAwake(true); });
   if (fromUrl) setFrame(true);
+  if (new URLSearchParams(location.search).has('clean')) document.body.classList.add('frame'); // alleen het beeld (voor screenshots)
 
   // een lijst die dagen aan staat: elke nacht om 04:00 even verversen (frisse klok, geen geheugenopbouw)
   setInterval(() => {

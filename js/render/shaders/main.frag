@@ -26,6 +26,9 @@ uniform vec3 u_skyTop, u_skyHor, u_lightCol, u_shadowCol;
 uniform float u_twilight, u_golden;
 uniform vec3 u_glowCol;
 
+// weather (0..1), weerklok u_wt, wind: + = naar rechts op het doek
+uniform float u_wt, u_cloud, u_rain, u_snow, u_snowCover, u_fog, u_wind;
+
 const vec3 LUM = vec3(0.299, 0.587, 0.114);
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -114,10 +117,12 @@ void main() {
 
   // lokale gemiddelde helderheid (ring van 8 monsters): textuur = verschil met dat gemiddelde
   float L = dot(orig, LUM), Lm = L * .2;
+  vec3 Cm = orig * .2;                       // lokale gemiddelde kleur (voor mist: zachtere streken)
   float winGlow = 0.;
   for (int i = 0; i < 8; i++) {
     float a = float(i) * .785398; vec2 o = vec2(cos(a), sin(a) * aspect);
-    Lm += dot(texture2D(u_tex, iuv + o * .012).rgb, LUM) * .1;
+    vec3 ring = texture2D(u_tex, iuv + o * .012).rgb;
+    Lm += dot(ring, LUM) * .1; Cm += ring * .1;
     winGlow += texture2D(u_maskB, iuv + o * .006).g + texture2D(u_maskB, iuv + o * .016).g * .6;
   }
   winGlow /= 12.8;
@@ -142,6 +147,13 @@ void main() {
   // hoger in de lucht een paarsige zweem tijdens de schemering
   skyC = mix(skyC, skyC * vec3(1.08, .92, 1.06), u_twilight * (1. - horizonK) * .5);
 
+  // WEATHER (bewolking): trage wolkenvlakken die met de wind meedrijven; ze verbergen sterren en zon deels
+  vec2 cdrift = vec2(-u_wt * .004 * (.4 + abs(u_wind)) * sign(u_wind + .001), 0.);
+  float cn = noise(iuv * vec2(2.4, 4.2) + cdrift) * .65 + noise(iuv * vec2(6., 9.) + cdrift * 1.7) * .35;
+  float cov = smoothstep(cn - .22, cn + .22, u_cloud);
+  float hide = clamp(1. - cov * .92, 0., 1.) * (1. - u_fog * .85);
+  presence *= hide;
+
   // sterren en maan: zichtbaar (gloeiend) of opgegaan in de lucht, per ster op zijn eigen moment
   float sm = clamp(starM + moonM, 0., 1.);
   vec3 skyNeutral = grad * (.92 + .2 * (Lm - .42)) + detail * .4;
@@ -150,6 +162,14 @@ void main() {
   starless = mix(starless, glowSky, tw * .6);
   vec3 starlit = skyC + orig * nightK * .18;
   skyC = mix(skyC, mix(starless, starlit, presence), sm);
+
+  // bewolkte lucht: grijzer en vlakker, de penseelstreken blijven zwak zichtbaar
+  float covK = clamp(u_cloud * (.35 + .65 * cov), 0., 1.);
+  vec3 cloudDay = mix(u_skyHor, u_skyTop, .4) * (.9 + .5 * (Lm - .42)) + detail * .55;
+  vec3 cloudNight = vec3(.075, .09, .135) * (.8 + Lm * .9) + detail * .3;
+  vec3 cloudC = mix(cloudNight, cloudDay, day);
+  cloudC = mix(cloudC, glowSky * .85, tw * .4);
+  skyC = mix(skyC, cloudC, covK * .88);
 
   // --- LANDSCHAP: helder daglicht met warme schaduwkant; 's nachts donker en koel ---
   // licht/schaduw: lichte streken vangen zonlicht, donkere streken liggen in (warme) schaduw
@@ -191,17 +211,53 @@ void main() {
     c += vec3(1., .58, .25) * rimV * u_golden * .3;
   }
 
+  // ---------- WEATHER (land) ----------
+  float land = 1. - sky;
+  // bewolkt: diffuus licht (minder kleur, iets donkerder); regen: nat en donkerder
+  c = mix(c, vec3(dot(c, LUM)), .28 * u_cloud * land);
+  c *= 1. - (.1 * u_cloud * day + .14 * u_rain) * land;
+
+  // sneeuwdek: eerst op de bovenranden van daken en heuvels, daarna steeds meer
+  if (u_snowCover > .001) {
+    float vilUp = texture2D(u_maskB, iuv - vec2(0., .012)).r;
+    float hilUp = texture2D(u_maskB, iuv - vec2(0., .02)).b;
+    float cypUp = texture2D(u_maskA, iuv - vec2(0., .01)).a;
+    float topV = vil * (1. - vilUp), topH = hil * (1. - hilUp), topC = cyp * (1. - cypUp);
+    float base = hil * .55 + vil * .22 + cyp * .06 + topV * 1.1 + topH * .5 + topC * .35 + litK * .15 * land;
+    float sn = noise(iuv * vec2(70., 110.)) * .55 + noise(iuv * vec2(15., 24.)) * .45;
+    float sAmt = smoothstep(.36, .58, base * u_snowCover * 1.6 + sn * .5 - .25) * land * (1. - win);
+    vec3 snowN = vec3(.52, .59, .80) * (.64 + L * .8) + detail * .8;   // maanlicht op sneeuw
+    vec3 snowD = vec3(.92, .94, .98) * (.9 + detail * 1.2);
+    vec3 snowC = mix(snowN, snowD, day);
+    snowC = mix(snowC, snowC * vec3(1.15, .92, .78), u_golden * .5 + tw * .3);
+    snowC += vec3(1., .68, .34) * winGlow * u_lamps * .5;
+    c = mix(c, snowC, sAmt * (.62 + .26 * sn));
+  }
+
+  // mist: dorp en heuvels verzachten (streken vervagen) en lossen op naar de horizon
+  float depth = smoothstep(.98, .5, iuv.y) * (1. - cyp * .5);
+  if (u_fog > .001) {
+    vec3 blurC = c - (orig - Cm) * (.55 + .35 * day);
+    c = mix(c, blurC, u_fog * (.4 + .5 * land));
+    vec3 fogCol = mix(vec3(.2, .22, .29), vec3(.77, .78, .80), day);
+    fogCol = mix(fogCol, u_glowCol * .7 + .22, tw * .3);
+    float fk = u_fog * (land * (.2 + .72 * depth) + sky * .6);
+    c = mix(c, fogCol * (.93 + .25 * (Lm - .42)), fk);
+  }
+
   // --- RAMEN: licht aan in avond en nacht, met zachte gloed; overdag uit ---
   float flick = 1. + (noise(vec2(t * 1.3, iuv.x * 50.)) - .5) * .12 * u_amp;
-  c = mix(c, vec3(1., .80, .40) * 1.25 * flick, win * u_lamps);
-  c += vec3(1., .66, .30) * winGlow * u_lamps * (.35 + .4 * nightK);
+  c = mix(c, vec3(1., .80, .40) * 1.25 * flick, win * u_lamps * (1. - u_fog * depth * .45));
+  c += vec3(1., .66, .30) * winGlow * u_lamps * (.35 + .4 * nightK) * (1. + u_fog * 1.2);
   c = mix(c, c * vec3(.42, .45, .55), win * (1. - u_lamps));
 
   // --- ZON in Van Gogh-stijl: de penseelstreken van de grootste ster, warm ingekleurd ---
   if (u_sun.z > .001) {
     vec2 sd = (iuv - u_sun.xy) * vec2(aspect, 1.);
     float sr = .085, len = length(sd);
-    float vis = u_sun.z * sky;
+    float scn = noise(u_sun.xy * vec2(2.4, 4.2) + cdrift) * .65 + noise(u_sun.xy * vec2(6., 9.) + cdrift * 1.7) * .35;
+    float sunHide = 1. - smoothstep(scn - .22, scn + .22, u_cloud) * .88;
+    float vis = u_sun.z * sky * sunHide * (1. - u_fog * .7);
     if (len < sr * 2.5 && vis > .001) {
       float ang = t * .05; mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
       vec3 sc;
@@ -230,7 +286,60 @@ void main() {
       float on = smoothstep(own * .8, own * .8 + .15, u_night);
       float s = smoothstep(.13, 0., length(f)) * twk;
       float dark = 1. - smoothstep(.08, .32, dot(c, LUM));
-      c += vec3(.9, .95, 1.) * s * on * sky * dark * 1.1;
+      c += vec3(.9, .95, 1.) * s * on * sky * dark * 1.1 * (1. - covK) * (1. - u_fog);
+    }
+  }
+
+  // ---------- WEATHER (neerslag): geschilderde streken en vlokken voor alles ----------
+  vec2 P = iuv * vec2(aspect, 1.);
+  // regen: korte, schuine streken (de wind bepaalt de schuinte); motregen dun en schaars, een bui dicht
+  if (u_rain > .001) {
+    vec2 vel = normalize(vec2(u_wind * .6 + .1, 1.));
+    vec2 Q = vec2(vel.y * P.x - vel.x * P.y, vel.x * P.x + vel.y * P.y);
+    for (int l = 0; l < 2; l++) {
+      float fl2 = float(l), sc = 1. + fl2 * .7;
+      vec2 cs = vec2(.016, .085) / sc;
+      vec2 g = Q / cs;
+      g.y -= u_wt * (1.5 + fl2 * .4) / cs.y + hash(vec2(floor(g.x), fl2)) * 9.;
+      vec2 cell = floor(g), f = fract(g);
+      float h = hash(cell + fl2 * 17.);
+      if (h < .12 + .6 * u_rain) {
+        float len = .3 + .45 * u_rain, cy = hash(cell + 5.7) * (1. - len);
+        float along = (f.y - cy) / len;
+        float dx = abs(f.x - .2 - .6 * hash(cell + 3.1)) * cs.x;
+        float w = (.0012 + .0016 * u_rain) / sc;
+        float a = smoothstep(w, w * .25, dx) * smoothstep(0., .2, along) * smoothstep(1., .55, along);
+        a *= .55 + .45 * noise(vec2(along * 6., cell.x * 3.1));        // penseeltextuur
+        // overdag blauwgrijze streken (contrast met de grijze lucht), 's nachts lichter
+        vec3 rc = mix(vec3(.52, .60, .76), vec3(.34, .41, .54), day) * (.85 + .3 * h);
+        rc = mix(rc, vec3(.92, .94, .98), .25 * day * step(.5, hash(cell + 8.8)));
+        c = mix(c, rc, a * (.3 + .45 * u_rain) * (1. - fl2 * .3));
+      }
+    }
+  }
+  // sneeuw: dwarrelende vlokken in drie lagen (dichtbij groter en sneller)
+  if (u_snow > .001) {
+    for (int l = 0; l < 3; l++) {
+      float fl3 = float(l), sc = 1. + fl3 * .8;
+      vec2 S = P;
+      S.x -= u_wind * u_wt * .035 / sc + sin(u_wt * .45 + P.y * 5. + fl3 * 2.) * .012;
+      S.y -= u_wt * (.075 / sqrt(sc));
+      vec2 g = S / (.055 / sc), cell = floor(g), f = fract(g) - .5;
+      float h = hash(cell + fl3 * 31.);
+      if (h < .12 + .5 * u_snow) {
+        vec2 o = (vec2(hash(cell + 1.3), hash(cell + 2.9)) - .5) * .5;
+        o.x += sin(u_wt * (.6 + h) + h * 20.) * .12;
+        vec2 d = f - o;
+        float r = (.075 + .06 * hash(cell + 4.4)) * (1. - fl3 * .12);
+        float irr = noise(d * 14. + cell * 1.7) * .4;
+        float dl = length(d * vec2(1., 1.2)) * (1. + irr);
+        float a = smoothstep(r, r * .35, dl);
+        // overdag een zacht blauwgrijs randje, zodat witte vlokken ook tegen een lichte lucht leesbaar zijn
+        float rim = smoothstep(r * 1.5, r * .9, dl) - a;
+        c = mix(c, c * vec3(.72, .76, .86), max(rim, 0.) * .55 * day * min(1., u_snow * 2.) * (1. - fl3 * .25));
+        vec3 fc = mix(vec3(.70, .76, .90), vec3(.97, .97, 1.), day) * (.85 + .2 * h) + vec3(1., .7, .4) * u_lamps * .06;
+        c = mix(c, fc, a * (.8 - fl3 * .18) * min(1., u_snow * 2.));
+      }
     }
   }
   vec2 vv = uv - .5; c *= 1. - u_vig * dot(vv, vv) * 2.2;

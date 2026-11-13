@@ -51,3 +51,4 @@ button.on { border-color: var(--accent); color: var(--accent); }
 .drop.show { display: flex; }
 .drop div { border: 2px dashed var(--accent); border-radius: 22px; padding: 46px 64px; font-family: Fraunces, serif; font-size: 24px; }
 .err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font-size: 15px; color: var(--dim); }
+.clock.wx { min-width: 84px; }

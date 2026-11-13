@@ -1,5 +1,5 @@
 @echo off
-rem Start Levend Schilderij lokaal en open de browser.
+rem Start Plein Air lokaal en open de browser.
 cd /d "%~dp0"
 set "PY="
 where py >nul 2>nul && set "PY=py"
