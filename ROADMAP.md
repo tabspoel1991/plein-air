@@ -7,9 +7,9 @@
 - Let op: een eigen upload wordt niet meer onthouden na herladen; de Sterrennacht is altijd het startbeeld
 
 ## 1. Motion v2
-- [ ] Slider 0 = volledig stil (ook geen zoom, korrel of twinkeling)
-- [ ] Slider max = duidelijk zichtbaar, constant in beweging
-- [ ] Slider stuurt snelheid én sterkte
+- [x] Slider 0 = volledig stil (ook geen zoom, korrel of twinkeling)
+- [x] Slider max = duidelijk zichtbaar, constant in beweging
+- [x] Slider stuurt snelheid én sterkte (eigen "bewegingsklok" die stilstaat op 0; vloeiend verloop)
 
 ## 2. Scene masks (Sterrennacht)
 - [ ] Mask-afbeelding per element: lucht, sterren, maan, cipres, dorp, ramen, heuvels

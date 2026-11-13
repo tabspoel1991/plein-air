@@ -2,7 +2,7 @@ precision highp float;
 varying vec2 v_uv;
 uniform sampler2D u_tex;
 uniform vec2 u_res, u_img;
-uniform float u_t, u_motion, u_k, u_expo, u_con, u_sat, u_skyAmt, u_vig, u_stars, u_glow;
+uniform float u_t, u_mt, u_amp, u_grain, u_zoom, u_k, u_expo, u_con, u_sat, u_skyAmt, u_vig, u_stars, u_glow;
 uniform vec3 u_gain, u_sky, u_horizon;
 const vec3 LUM = vec3(0.299, 0.587, 0.114);
 
@@ -15,14 +15,14 @@ vec2 cover(vec2 uv) { float rs = u_res.x / u_res.y, ri = u_img.x / u_img.y;
   vec2 s = rs > ri ? vec2(1., ri / rs) : vec2(rs / ri, 1.); return (uv - .5) * s + .5; }
 
 void main() {
-  vec2 uv = v_uv; float t = u_t;
-  float z = .955 + .008 * sin(t * .07);
+  vec2 uv = v_uv; float t = u_mt; // bewegingsklok: staat stil als de slider op 0 staat
+  float z = .955 + .012 * u_zoom * sin(t * .07);
   vec2 iuv = cover((uv - .5) * z + .5);
   float top = 1. - iuv.y;
   vec2 q = iuv * vec2(u_img.x / u_img.y, 1.) * 2.4;
   vec2 f1 = vec2(fbm(q + vec2(t * .03, 0.)), fbm(q + vec2(5.2, 1.3) - vec2(0., t * .03))) - .5;
   vec2 f2 = vec2(fbm(q * 1.7 + f1 * 2. + t * .02), fbm(q * 1.7 - f1 * 2. + 3.1 - t * .02)) - .5;
-  float amp = u_motion * .013 * mix(.45, 1., smoothstep(.2, .9, top));
+  float amp = u_amp * .02 * mix(.45, 1., smoothstep(.2, .9, top));
   iuv += (f1 + f2 * .6) * amp;
 
   vec3 c = texture2D(u_tex, iuv).rgb;
@@ -47,13 +47,13 @@ void main() {
     vec2 sg = iuv * vec2(u_img.x / u_img.y, 1.) * 80.; vec2 cell = floor(sg); float h = hash(cell);
     if (h > .982) {
       vec2 f = fract(sg) - .5 - (vec2(hash(cell + 1.7), hash(cell + 3.1)) - .5) * .6;
-      float tw = .45 + .55 * sin(t * (.8 + h * 2.5) + h * 40.);
+      float tw = mix(.8, .45 + .55 * sin(t * (.8 + h * 2.5) + h * 40.), u_amp);
       float s = smoothstep(.13, 0., length(f)) * tw;
       float dark = 1. - smoothstep(.08, .32, dot(c, LUM));
       c += vec3(.9, .95, 1.) * s * u_stars * skyMask * dark * 1.3;
     }
   }
   vec2 vv = uv - .5; c *= 1. - u_vig * dot(vv, vv) * 2.2;
-  c += (hash(uv * u_res + fract(t * .37) * 100.) - .5) * .022;
+  c += (hash(uv * u_res + fract(t * .37) * 100.) - .5) * u_grain;
   gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
 }

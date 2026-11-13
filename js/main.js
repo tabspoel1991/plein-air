@@ -3,7 +3,7 @@ import { DEFAULT_PAINTING, loadImage, loadImageFile, toCanvas, measureLuma } fro
 import { sunPosition } from './time/sun.js';
 import { lightProfile, phaseName, easeProfile } from './time/profile.js';
 import { relightUniforms } from './relight/relight.js';
-import { motionUniforms } from './motion/motion.js';
+import { createMotion } from './motion/motion.js';
 import { createRenderer } from './render/renderer.js';
 import { initUI } from './ui/controls.js';
 
@@ -27,6 +27,7 @@ async function start() {
 
   setPainting(await loadImage(DEFAULT_PAINTING.url), DEFAULT_PAINTING.name);
 
+  const motion = createMotion();
   let profile = null, last = performance.now();
   const t0 = last;
   function frame(now) {
@@ -35,11 +36,13 @@ async function start() {
     const date = ui.targetDate(), sun = sunPosition(date);
     profile = easeProfile(profile, lightProfile(sun), dt);
     ui.showTime(date, phaseName(sun));
-    renderer.setUniforms({
+    const uniforms = {
       u_res: res, u_img: imgSize, u_t: (now - t0) / 1000,
-      ...motionUniforms(ui.motion),
+      ...motion.update(ui.motion, dt),
       ...relightUniforms(profile, srcLuma),
-    });
+    };
+    renderer.setUniforms(uniforms);
+    window.__levend = { uniforms, profile, sun, ui }; // alleen voor testen/debuggen
     renderer.draw();
     requestAnimationFrame(frame);
   }
