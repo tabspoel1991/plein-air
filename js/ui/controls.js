@@ -21,6 +21,13 @@ export function initUI({ onFile }) {
 
   $('fs').addEventListener('click', toggleFullscreen);
 
+  // sneltoetsen: M = masks tonen (debug)
+  state.debug = false;
+  addEventListener('keydown', e => {
+    if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
+    if (e.key === 'm' || e.key === 'M') { state.debug = !state.debug; $('legend').classList.toggle('show', state.debug); }
+  });
+
   // knoppen verbergen na stilte, zodat het als lijst aan de muur werkt
   let idleT;
   const wake = () => { document.body.classList.remove('idle'); clearTimeout(idleT); idleT = setTimeout(() => document.body.classList.add('idle'), 3500); };

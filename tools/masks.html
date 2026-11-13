@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<title>Masks genereren · Levend Schilderij</title>
+<style>
+  body { font: 14px system-ui, sans-serif; background: #15130f; color: #eee; margin: 24px; }
+  button { font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid #555; background: #2a2620; color: #eee; cursor: pointer; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; margin-top: 18px; }
+  figure { margin: 0; } figure canvas, figure img { width: 100%; border-radius: 6px; display: block; background: #000; }
+  figcaption { margin-top: 4px; color: #bbb; }
+  #log { white-space: pre-wrap; color: #e9b872; margin-top: 12px; }
+</style>
+</head>
+<body>
+<h1>Masks voor De Sterrennacht</h1>
+<p>Genereert de masks automatisch (kleur, helderheid, positie). <b>Opslaan overschrijft</b> de PNG's in <code>assets/masks/</code>, ook als je ze met de hand hebt bijgewerkt.</p>
+<button id="gen">Genereer</button> <button id="save" disabled>Opslaan in assets/masks/</button>
+<div id="log"></div>
+<div class="grid" id="grid"></div>
+<script type="module">
+import { generateMasks, maskToCanvas, MASK_NAMES } from '../js/scene/autoMasks.js';
+import { loadImage, DEFAULT_PAINTING } from '../js/input/image.js';
+
+const log = t => document.getElementById('log').textContent += t + '\n';
+let result = null;
+
+async function gen() {
+  document.getElementById('grid').innerHTML = ''; document.getElementById('log').textContent = '';
+  const img = await loadImage('../' + DEFAULT_PAINTING.url);
+  const t0 = performance.now();
+  const r = generateMasks(img);
+  const canvases = {};
+  for (const n of MASK_NAMES) canvases[n] = maskToCanvas(r.masks[n], r.width, r.height);
+  for (const n in canvases) {
+    const f = document.createElement('figure'); f.appendChild(canvases[n]);
+    const c = document.createElement('figcaption'); c.textContent = n + '.png'; f.appendChild(c);
+    document.getElementById('grid').appendChild(f);
+  }
+  result = { canvases, data: { ...r.data, generated: new Date().toISOString() } };
+  log(`Klaar in ${Math.round(performance.now() - t0)} ms · ${r.data.stars.length} sterren · maan ${r.data.moon ? 'gevonden' : 'niet gevonden'}`);
+  document.getElementById('save').disabled = false;
+  window.__masks = result;
+}
+
+async function put(name, body, type) {
+  const res = await fetch('../assets/masks/' + name, { method: 'PUT', body, headers: { 'Content-Type': type } });
+  if (!res.ok) throw new Error(name + ': ' + res.status);
+}
+async function save() {
+  for (const n in result.canvases) {
+    const blob = await new Promise(r => result.canvases[n].toBlob(r, 'image/png'));
+    await put(n + '.png', blob, 'image/png');
+  }
+  await put('scene.json', JSON.stringify(result.data, null, 2), 'application/json');
+  log('Opgeslagen in assets/masks/');
+}
+document.getElementById('gen').onclick = () => gen().catch(e => log('Fout: ' + e.message));
+document.getElementById('save').onclick = () => save().catch(e => log('Fout: ' + e.message));
+</script>
+</body>
+</html>

@@ -1,6 +1,9 @@
 precision highp float;
 varying vec2 v_uv;
 uniform sampler2D u_tex;
+uniform sampler2D u_maskA; // r=lucht g=sterren b=maan a=cipres
+uniform sampler2D u_maskB; // r=dorp g=ramen b=heuvels
+uniform float u_debug;
 uniform vec2 u_res, u_img;
 uniform float u_t, u_mt, u_amp, u_grain, u_zoom, u_k, u_expo, u_con, u_sat, u_skyAmt, u_vig, u_stars, u_glow;
 uniform vec3 u_gain, u_sky, u_horizon;
@@ -55,5 +58,20 @@ void main() {
   }
   vec2 vv = uv - .5; c *= 1. - u_vig * dot(vv, vv) * 2.2;
   c += (hash(uv * u_res + fract(t * .37) * 100.) - .5) * u_grain;
+
+  // debug-weergave (toets M): masks in kleur over het schilderij
+  if (u_debug > .5) {
+    vec4 mA = texture2D(u_maskA, iuv), mB = texture2D(u_maskB, iuv);
+    vec3 base = texture2D(u_tex, iuv).rgb * .45;
+    vec3 o = base;
+    o = mix(o, vec3(.55, .35, .15), mB.b * .6);  // heuvels
+    o = mix(o, vec3(.25, .75, 1.), mA.r * .6);   // lucht
+    o = mix(o, vec3(1., .2, .2), mB.r * .6);     // dorp
+    o = mix(o, vec3(.1, 1., .3), mA.a * .6);     // cipres
+    o = mix(o, vec3(1., .55, 0.), mA.b * .7);    // maan
+    o = mix(o, vec3(1., .95, 0.), mA.g * .7);    // sterren
+    o = mix(o, vec3(1., 0., 1.), mB.g * .9);     // ramen
+    c = o;
+  }
   gl_FragColor = vec4(clamp(c, 0., 1.), 1.);
 }

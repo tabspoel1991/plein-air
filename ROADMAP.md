@@ -12,8 +12,11 @@
 - [x] Slider stuurt snelheid én sterkte (eigen "bewegingsklok" die stilstaat op 0; vloeiend verloop)
 
 ## 2. Scene masks (Sterrennacht)
-- [ ] Mask-afbeelding per element: lucht, sterren, maan, cipres, dorp, ramen, heuvels
-- [ ] Eerst handgemaakt (ingekleurde PNG), later automatisch met AI-segmentatie
+- [x] Mask-afbeelding per element: lucht, sterren, maan, cipres, dorp, ramen, heuvels (`assets/masks/*.png`, grijswaarden, met de hand bij te werken)
+- [x] Automatisch gemaakt op kleur, helderheid en positie (`js/scene/autoMasks.js`); alle 11 sterren en de maan worden gevonden
+- [x] Opnieuw genereren: open `http://localhost:8000/tools/masks.html` → Genereer → Opslaan (let op: overschrijft handwerk)
+- [x] Debug-weergave: toets M toont de masks in kleur met legenda
+- Later: AI-segmentatie; een eigen upload krijgt nu alleen een simpele lucht/land-verdeling
 
 ## 3. Beweging per element
 - [ ] Wervels in de lucht draaien mee met hun penseelrichting

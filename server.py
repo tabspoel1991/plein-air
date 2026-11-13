@@ -6,6 +6,7 @@ zodat elke wijziging direct zichtbaar is na verversen.
 """
 import http.server
 import os
+import re
 import sys
 from functools import partial
 
@@ -24,6 +25,28 @@ class Handler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         self.send_header("Cache-Control", "no-store")
         super().end_headers()
+
+    # Alleen voor tools/masks.html: masks opslaan in assets/masks/ (en nergens anders).
+    def do_PUT(self):
+        name = self.path.split("?")[0]
+        if not re.fullmatch(r"/assets/masks/[a-z0-9_-]+\.(png|json)", name):
+            self.send_error(403, "Alleen assets/masks/*.png of *.json")
+            return
+        length = int(self.headers.get("Content-Length", 0))
+        if length <= 0 or length > 20_000_000:
+            self.send_error(413, "Te groot of leeg")
+            return
+        data = self.rfile.read(length)
+        target = os.path.join(ROOT, "assets", "masks", os.path.basename(name))
+        os.makedirs(os.path.dirname(target), exist_ok=True)
+        with open(target, "wb") as f:
+            f.write(data)
+        body = b"ok"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/plain")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
 
     def log_message(self, fmt, *args):
         pass  # stil houden

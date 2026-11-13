@@ -5,17 +5,23 @@ import { lightProfile, phaseName, easeProfile } from './time/profile.js';
 import { relightUniforms } from './relight/relight.js';
 import { createMotion } from './motion/motion.js';
 import { createRenderer } from './render/renderer.js';
+import { loadScene, genericScene } from './scene/scene.js';
 import { initUI } from './ui/controls.js';
 
-const ui = initUI({ onFile: f => loadImageFile(f).then(img => setPainting(img, f.name.replace(/\.[^.]+$/, ''))).catch(console.error) });
+const ui = initUI({
+  onFile: f => loadImageFile(f).then(img => setPainting(img, f.name.replace(/\.[^.]+$/, ''), genericScene())).catch(console.error),
+});
 
-let renderer, imgSize = [16, 9], srcLuma = .45;
+let renderer, scene, imgSize = [16, 9], srcLuma = .45;
 
-function setPainting(source, title) {
+function setPainting(source, title, sc) {
   const c = toCanvas(source);
   renderer.setTexture('u_tex', 0, c);
   imgSize = [c.width, c.height];
   srcLuma = measureLuma(c);
+  scene = sc;
+  renderer.setTexture('u_maskA', 1, sc.maskA);
+  renderer.setTexture('u_maskB', 2, sc.maskB);
   ui.setTitle(title);
 }
 
@@ -25,7 +31,8 @@ async function start() {
   } catch (e) { console.error(e); ui.showError('Shader-fout: ' + e.message); return; }
   if (!renderer) { ui.showError(); return; }
 
-  setPainting(await loadImage(DEFAULT_PAINTING.url), DEFAULT_PAINTING.name);
+  const [img, sc] = await Promise.all([loadImage(DEFAULT_PAINTING.url), loadScene()]);
+  setPainting(img, DEFAULT_PAINTING.name, sc);
 
   const motion = createMotion();
   let profile = null, last = performance.now();
@@ -40,6 +47,7 @@ async function start() {
       u_res: res, u_img: imgSize, u_t: (now - t0) / 1000,
       ...motion.update(ui.motion, dt),
       ...relightUniforms(profile, srcLuma),
+      u_debug: ui.debug ? 1 : 0,
     };
     renderer.setUniforms(uniforms);
     window.__levend = { uniforms, profile, sun, ui }; // alleen voor testen/debuggen
