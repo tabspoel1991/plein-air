@@ -13,6 +13,7 @@ import { createWeather, applyWeather, windToMotion } from './weather/weather.js'
 import { createWeatherState, weatherUniforms } from './weather/state.js';
 
 const params = new URLSearchParams(location.search);
+const demo = params.has('demo');
 
 function weatherName(w) {
   const n = w.snow > .15 ? 'Sneeuw' : w.rain > .55 ? 'Regen' : w.rain > .12 ? 'Motregen' : w.fog > .4 ? 'Mist'
@@ -40,12 +41,20 @@ function setPainting(source, title, sc) {
 
 async function start() {
   try {
-    renderer = await createRenderer(document.getElementById('gl'), { vert: 'js/render/shaders/main.vert', frag: 'js/render/shaders/main.frag' });
+    renderer = await createRenderer(document.getElementById('gl'), { vert: 'js/render/shaders/main.vert', frag: 'js/render/shaders/main.frag', preserve: demo });
   } catch (e) { console.error(e); ui.showError('Shader-fout: ' + e.message); return; }
   if (!renderer) { ui.showError(); return; }
 
   const [img, sc] = await Promise.all([loadImage(DEFAULT_PAINTING.url), loadScene()]);
   setPainting(img, DEFAULT_PAINTING.name, sc);
+
+  // demo-modus: een eigen klok en een eigen draaiboek (js/demo/)
+  if (demo) {
+    const { runDemo } = await import('./demo/demo.js');
+    try { await runDemo({ renderer, scene, imgSize, glCanvas: document.getElementById('gl') }); }
+    catch (e) { console.error(e); ui.showError('Demo-fout: ' + e.message); }
+    return;
+  }
 
   const motion = createMotion(), quality = createQuality();
   const forced = params.get('weather');

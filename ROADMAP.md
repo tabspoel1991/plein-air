@@ -58,9 +58,12 @@
 - Overdag staat de maan als bleke schijf in de lucht; in 16:9 valt de bovenkant van de maan net buiten beeld
 
 ## 9. Demo-modus (`?demo`)
-- [ ] Gescripte film van 60 s met eigen klok, deterministisch, frame voor frame bestuurbaar
-- [ ] Bijschriften en titelkaart
-- [ ] Kamershot: het doek als tv-frame in een woonkamer, sneeuw buiten synchroon
+- [x] Gescripte film van 60 s met eigen klok (`js/demo/timeline.js`), deterministisch; `?demo&t=14&pause` toont één exact frame, spatie = pauze, ←/→ = spoelen
+- [x] Opening als museumprint (heel doek op donker, label), dan komt hij tot leven vanuit de centrale wervel
+- [x] Dageraad (met ochtendnevel), regen, wind, gouden uur, sneeuwnacht met de echte maanfase (de originele sikkel blijft tot dan staan)
+- [x] Bijschriften linksonder en titelkaart in Cormorant Garamond (lokaal, OFL)
+- [x] Kamershot: naadloze uitzoom van het doek naar een tv-frame in een woonkamer met lamp en raam; buiten sneeuwt het synchroon
+- Kamer is zelf geschilderd (shader) in plaats van een foto: Unsplash/Pexels blokkeerden downloads, geen geschikte vrije foto op Wikimedia (zie CREDITS.md)
 
 ## 10. Film renderen
 - [ ] Muziek: Satie, Gymnopédie No. 1 (vrije licentie, bron in CREDITS.md)

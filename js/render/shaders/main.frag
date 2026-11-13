@@ -33,6 +33,11 @@ uniform float u_wt, u_cloud, u_rain, u_snow, u_snowCover, u_fog, u_wind;
 uniform vec3 u_moonDisk;
 uniform float u_moonPhase;
 
+// demo: 0 = gewoon. u_still 1 = de onbewerkte museumprint; u_contain 1 = het hele doek in beeld (op donker);
+// u_pan = verschuiving omhoog/omlaag; u_wake = beweging alleen binnen straal z rond (x, y) (z <= 0: overal)
+uniform float u_still, u_contain, u_pan, u_moonOrig;   // u_moonOrig 1 = de originele sikkel houden
+uniform vec3 u_wake;
+
 const vec3 LUM = vec3(0.299, 0.587, 0.114);
 
 float hash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
@@ -40,7 +45,10 @@ float noise(vec2 p) { vec2 i = floor(p), f = fract(p); f = f * f * (3. - 2. * f)
   return mix(mix(hash(i), hash(i + vec2(1, 0)), f.x), mix(hash(i + vec2(0, 1)), hash(i + vec2(1, 1)), f.x), f.y); }
 vec3 softLight(vec3 b, vec3 s) { return mix(2. * b * s + b * b * (1. - 2. * s), sqrt(b) * (2. * s - 1.) + 2. * b * (1. - s), step(.5, s)); }
 vec2 cover(vec2 uv) { float rs = u_res.x / u_res.y, ri = u_img.x / u_img.y;
-  vec2 s = rs > ri ? vec2(1., ri / rs) : vec2(rs / ri, 1.); return (uv - .5) * s + .5; }
+  vec2 s = rs > ri ? vec2(1., ri / rs) : vec2(rs / ri, 1.);
+  vec2 sc = rs > ri ? vec2(rs / ri, 1.) : vec2(1., ri / rs);   // contain: het hele doek
+  s = mix(s, sc, u_contain);
+  return (uv - .5) * s + .5 + vec2(0., u_pan); }
 
 // zachte versie van een mask-kanaal (5 taps), zodat verplaatsingen geen randen scheuren
 vec4 softA(vec2 p) { float e = .008;
@@ -57,13 +65,16 @@ void main() {
   float skyW = mA0.r, cypW = mA0.a;
 
   // ---------- MOTION ----------
+  // demo: de beweging begint bij één wervel en verspreidt zich (u_wake); anders overal
+  float wake = u_wake.z <= 0. ? 1. : 1. - smoothstep(u_wake.z - .3, u_wake.z, length((p - u_wake.xy) * vec2(aspect, 1.)));
+  float amp = u_amp * wake;
   vec2 disp = vec2(0.);
 
   // cipres: wiegt langzaam (meer naar de top), met vlammende golfjes die omhoog lopen
   float height = smoothstep(1., .05, p.y);
   float sway = sin(t * .55 + p.y * 3.) * .006 + sin(t * .9 + p.y * 9.) * .002;
   float flame = (noise(vec2(p.x * 14., p.y * 7. + t * .7)) - .5) * .006;
-  disp.x += (sway * height + flame * (.3 + height)) * cypW * u_amp;
+  disp.x += (sway * height + flame * (.3 + height)) * cypW * amp;
 
   // sterren en maan: de krans "ademt" (schaal rond het middelpunt), elk in een eigen ritme
   // + per ster: hoe zichtbaar is hij nu? Elke ster heeft een eigen moment waarop hij
@@ -78,7 +89,7 @@ void main() {
     float pulse = sin(t * (.9 + s.w * 1.1) + s.w * 6.283);
     float th = .1 + s.w * .45;
     float vis = 1. - smoothstep(th - .06, th + .06, u_day);
-    disp -= (p - s.xy) * pulse * .035 * w * u_amp * vis;
+    disp -= (p - s.xy) * pulse * .035 * w * amp * vis;
     halo += w * pulse * vis;
     presW += w * vis; presSum += w;
   }
@@ -87,7 +98,7 @@ void main() {
     float w = smoothstep(u_moon.z * aspect, u_moon.z * aspect * .3, length(d));
     float pulse = sin(t * .45 + 1.3);
     float vis = 1. - smoothstep(.5, .7, u_day);
-    disp -= (p - u_moon.xy) * pulse * .02 * w * u_amp * vis;
+    disp -= (p - u_moon.xy) * pulse * .02 * w * amp * vis;
     halo += w * pulse * .7 * vis;
     presW += w * vis; presSum += w;
   }
@@ -95,12 +106,12 @@ void main() {
 
   // dorp en heuvels: (bijna) stil — alleen een heel klein beetje leven in het gras
   vec4 mB0 = texture2D(u_maskB, p);
-  disp += (vec2(noise(p * 9. + t * .2), noise(p * 9. - t * .2)) - .5) * .0012 * mB0.b * u_amp;
+  disp += (vec2(noise(p * 9. + t * .2), noise(p * 9. - t * .2)) - .5) * .0012 * mB0.b * amp;
 
   // lucht: wervels stromen mee met de penseelstreken (flow map, twee fasen die overvloeien)
   vec3 fl = texture2D(u_flow, p).rgb;
   vec2 dir = (fl.rg * 2. - 1.) * vec2(1. / aspect, 1.);
-  float flowAmt = skyW * (.25 + .75 * fl.b) * u_amp * .014;
+  float flowAmt = skyW * (.25 + .75 * fl.b) * amp * .014;
   float ph = t * .12 + noise(p * 3.) * .7;  // ruis in de fase voorkomt dat alles tegelijk "pompt"
   float ph0 = fract(ph), ph1 = fract(ph + .5);
   vec2 q = p + disp;
@@ -110,7 +121,7 @@ void main() {
   vec2 iuv = q;
 
   // zachte puls in de helderheid van de kransen
-  c *= 1. + halo * .12 * u_amp;
+  c *= 1. + halo * .12 * amp;
 
   // ---------- RELIGHT ----------
   vec3 orig = c;
@@ -121,7 +132,7 @@ void main() {
     float ml = length(md);
     if (ml < 1.25) {
       float jag = (noise(md * 5. + 3.7) - .5) * .14;                     // rafelige penseelrand
-      float diskK = smoothstep(1.1, .98, ml + jag * .6);                  // schijf loopt net voorbij de rand
+      float diskK = smoothstep(1.1, .98, ml + jag * .6) * (1. - smoothstep(.2, .55, u_day)) * (1. - u_moonOrig); // overdag: geen donkere schijf
       float limb = smoothstep(1.04, .97, ml + jag * .5);                  // binnen de maanrand
       float sy = sqrt(max(0., 1. - md.y * md.y));
       float mph = u_moonPhase;
@@ -379,6 +390,15 @@ void main() {
   }
   vec2 vv = uv - .5; c *= 1. - u_vig * dot(vv, vv) * 2.2;
   c += (hash(uv * u_res + fract(t * .37) * 100.) - .5) * u_grain;
+
+  // demo: de onbewerkte print (geen beweging, gloed of korrel) en het doek op een donkere museumwand
+  if (u_still > 0.) c = mix(c, texture2D(u_tex, p).rgb, u_still);
+  if (u_contain > 0.) {
+    vec2 ed = min(p, 1. - p);
+    float inside = smoothstep(-.0015, .0015, min(ed.x, ed.y));
+    float shadow = smoothstep(.0, -.03, min(ed.x, ed.y));
+    c = mix(vec3(.028, .025, .022) * (1. - .5 * (1. - shadow)), c, inside);
+  }
 
   // debug-weergave (toets M): masks in kleur over het schilderij
   if (u_debug > .5) {

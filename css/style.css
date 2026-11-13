@@ -52,3 +52,9 @@ button.on { border-color: var(--accent); color: var(--accent); }
 .drop div { border: 2px dashed var(--accent); border-radius: 22px; padding: 46px 64px; font-family: Fraunces, serif; font-size: 24px; }
 .err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font-size: 15px; color: var(--dim); }
 .clock.wx { min-width: 84px; }
+
+/* demo: alleen de compositor (beeld + bijschriften), geen knoppen */
+body.demo .bar, body.demo .title, body.demo .legend { display: none !important; }
+body.demo canvas#gl { visibility: hidden; }
+canvas#comp { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
+body.demo { cursor: none; }
