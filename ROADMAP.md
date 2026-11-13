@@ -32,8 +32,9 @@
 - [x] Overgangen vloeiend (alle waarden lopen geleidelijk mee met de zonshoogte)
 
 ## 5. Overgangen
-- [ ] Zonsopkomst en zonsondergang als kleurverloop over de horizon
-- [ ] Gouden uur op cipres en daken
+- [x] Zonsopkomst en zonsondergang als kleurverloop over de horizon (ochtend rozer, avond oranjer, sterkst aan de zonkant)
+- [x] Sterren verdwijnen/verschijnen één voor één (elke ster en elk twinkelsterretje heeft een eigen moment); zon kleurt roder bij de horizon
+- [x] Gouden uur: warm strijklicht op de zonkant van de cipres en op de daken
 
 ## 6. Frame-modus
 - [ ] Opent direct fullscreen, geen knoppen

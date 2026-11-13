@@ -12,5 +12,6 @@ export function relightUniforms(p, scene) {
     u_skyTop: p.skyTop, u_skyHor: p.skyHor,
     u_lightCol: p.lightCol, u_shadowCol: p.shadowCol,
     u_vig: p.vig,
+    u_twilight: p.twilight, u_golden: p.golden, u_glowCol: p.glowCol,
   };
 }

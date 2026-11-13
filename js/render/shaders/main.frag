@@ -19,6 +19,8 @@ uniform float u_day, u_night, u_lamps, u_sunDir, u_vig;
 uniform vec3 u_sun;        // x, y, zichtbaarheid
 uniform vec3 u_sunSrc;     // ster waarvan de zon zijn penseelstreken leent (x, y, straal)
 uniform vec3 u_skyTop, u_skyHor, u_lightCol, u_shadowCol;
+uniform float u_twilight, u_golden;
+uniform vec3 u_glowCol;
 
 const vec3 LUM = vec3(0.299, 0.587, 0.114);
 
@@ -53,7 +55,9 @@ void main() {
   disp.x += (sway * height + flame * (.3 + height)) * cypW * u_amp;
 
   // sterren en maan: de krans "ademt" (schaal rond het middelpunt), elk in een eigen ritme
-  float halo = 0.;
+  // + per ster: hoe zichtbaar is hij nu? Elke ster heeft een eigen moment waarop hij
+  //   verdwijnt (ochtend) of verschijnt (avond), zodat ze één voor één gaan.
+  float halo = 0., presW = 0., presSum = 0.;
   for (int i = 0; i < 16; i++) {
     if (float(i) >= u_starCount) break;
     vec4 s = u_star[i];
@@ -61,16 +65,22 @@ void main() {
     float r = s.z * aspect;
     float w = smoothstep(r, r * .3, length(d));
     float pulse = sin(t * (.9 + s.w * 1.1) + s.w * 6.283);
-    disp -= (p - s.xy) * pulse * .035 * w * u_amp;
-    halo += w * pulse;
+    float th = .1 + s.w * .45;
+    float vis = 1. - smoothstep(th - .06, th + .06, u_day);
+    disp -= (p - s.xy) * pulse * .035 * w * u_amp * vis;
+    halo += w * pulse * vis;
+    presW += w * vis; presSum += w;
   }
   if (u_moon.z > 0.) {
     vec2 d = (p - u_moon.xy) * vec2(aspect, 1.);
     float w = smoothstep(u_moon.z * aspect, u_moon.z * aspect * .3, length(d));
     float pulse = sin(t * .45 + 1.3);
-    disp -= (p - u_moon.xy) * pulse * .02 * w * u_amp;
-    halo += w * pulse * .7;
+    float vis = 1. - smoothstep(.5, .7, u_day);
+    disp -= (p - u_moon.xy) * pulse * .02 * w * u_amp * vis;
+    halo += w * pulse * .7 * vis;
+    presW += w * vis; presSum += w;
   }
+  float presence = presSum > .001 ? presW / presSum : 1. - u_day;
 
   // dorp en heuvels: (bijna) stil — alleen een heel klein beetje leven in het gras
   vec4 mB0 = texture2D(u_maskB, p);
@@ -117,12 +127,25 @@ void main() {
   float pale = smoothstep(.5, .85, L) * (1. - sat * .8);              // witte/lichte streken → roomwit
   skyDay = mix(skyDay, vec3(.99, .97, .9), pale * .5);
   skyDay += (orig - vec3(L)) * .3;                                     // een beetje van Van Goghs kleurnuances
-  // sterren en maan gaan overdag op in de lucht (alleen de textuur blijft)
+  vec3 skyC = mix(skyNight, skyDay, day);
+
+  // zonsopkomst/-ondergang: roze/oranje verloop over de horizon, het sterkst aan de kant van de zon
+  float horizonK = smoothstep(.12, .68, iuv.y);
+  float sunSide = .5 + .5 * exp(-pow((iuv.x - u_sun.x) * 2.2, 2.));
+  float tw = u_twilight * horizonK * sunSide;
+  vec3 glowSky = (Lm * .7 + .38 + detail * .9) * u_glowCol;
+  skyC = mix(skyC, glowSky, tw * .75);
+  // hoger in de lucht een paarsige zweem tijdens de schemering
+  skyC = mix(skyC, skyC * vec3(1.08, .92, 1.06), u_twilight * (1. - horizonK) * .5);
+
+  // sterren en maan: zichtbaar (gloeiend) of opgegaan in de lucht, per ster op zijn eigen moment
   float sm = clamp(starM + moonM, 0., 1.);
   vec3 skyNeutral = grad * (.92 + .2 * (Lm - .42)) + detail * .4;
-  skyDay = mix(skyDay, skyNeutral, sm * .92);
-  vec3 skyC = mix(skyNight, skyDay, day);
-  skyC += orig * sm * nightK * .18;                                     // 's nachts gloeien sterren en maan
+  vec3 nightNeutral = vec3(.10, .17, .40) * (.75 + Lm * .7) + detail * .5;
+  vec3 starless = mix(nightNeutral, skyNeutral, day);
+  starless = mix(starless, glowSky, tw * .6);
+  vec3 starlit = skyC + orig * nightK * .18;
+  skyC = mix(skyC, mix(starless, starlit, presence), sm);
 
   // --- LANDSCHAP: helder daglicht met warme schaduwkant; 's nachts donker en koel ---
   // licht/schaduw: lichte streken vangen zonlicht, donkere streken liggen in (warme) schaduw
@@ -152,6 +175,18 @@ void main() {
   c = (skyC * sky + cC * cyp + vC * vil + hC * hil) / wsum;
   c = mix(c, orig * mix(.6, 1.1, day), smoothstep(.1, 0., wsum));     // plekken zonder mask
 
+  // --- GOUDEN UUR: warm strijklicht op cipres en daken ---
+  if (u_golden > .001) {
+    vec2 sdv = vec2(u_sunDir * .022, 0.);
+    float rim = cyp * (1. - texture2D(u_maskA, iuv + sdv).a);               // cipresrand aan de zonkant
+    float rimV = vil * (1. - texture2D(u_maskB, iuv + sdv * .4 - vec2(0., .006)).r); // daken/randen in het dorp
+    float landK = 1. - sky;
+    c = mix(c, c * vec3(1.24, 1.0, .70), u_golden * landK * .55);           // alles warmer
+    c += vec3(1., .55, .18) * rim * u_golden * (.25 + .6 * litK);
+    c += vec3(1., .62, .30) * vil * litK * u_golden * .22;
+    c += vec3(1., .58, .25) * rimV * u_golden * .3;
+  }
+
   // --- RAMEN: licht aan in avond en nacht, met zachte gloed; overdag uit ---
   float flick = 1. + (noise(vec2(t * 1.3, iuv.x * 50.)) - .5) * .12 * u_amp;
   c = mix(c, vec3(1., .80, .40) * 1.25 * flick, win * u_lamps);
@@ -175,20 +210,23 @@ void main() {
       }
       float sl = dot(sc, LUM);
       vec3 sunC = mix(vec3(1., .66, .16), vec3(1., .98, .84), smoothstep(.5, .85, sl)) * (.55 + .7 * sl);
+      sunC *= mix(vec3(1.), vec3(1., .6, .36), clamp(u_twilight * .9 + u_golden * .35, 0., 1.)); // roder bij de horizon
       c = mix(c, sunC, smoothstep(sr, sr * .8, len) * vis);
       c += vec3(1., .88, .6) * exp(-len / sr * 1.8) * .22 * vis;
     }
   }
 
-  // --- twinkelende sterretjes in de donkerste nacht ---
+  // --- twinkelende sterretjes in de donkerste nacht; ze komen één voor één ---
   if (u_night > .01) {
     vec2 sg = iuv * vec2(aspect, 1.) * 80.; vec2 cell = floor(sg); float h = hash(cell);
     if (h > .982) {
       vec2 f = fract(sg) - .5 - (vec2(hash(cell + 1.7), hash(cell + 3.1)) - .5) * .6;
-      float tw = mix(.8, .45 + .55 * sin(t * (.8 + h * 2.5) + h * 40.), u_amp);
-      float s = smoothstep(.13, 0., length(f)) * tw;
+      float twk = mix(.8, .45 + .55 * sin(t * (.8 + h * 2.5) + h * 40.), u_amp);
+      float own = hash(cell + 7.3);                                     // eigen moment van verschijnen
+      float on = smoothstep(own * .8, own * .8 + .15, u_night);
+      float s = smoothstep(.13, 0., length(f)) * twk;
       float dark = 1. - smoothstep(.08, .32, dot(c, LUM));
-      c += vec3(.9, .95, 1.) * s * u_night * sky * dark * 1.1;
+      c += vec3(.9, .95, 1.) * s * on * sky * dark * 1.1;
     }
   }
   vec2 vv = uv - .5; c *= 1. - u_vig * dot(vv, vv) * 2.2;

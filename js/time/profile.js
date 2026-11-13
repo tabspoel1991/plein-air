@@ -26,8 +26,13 @@ export function lightProfile(sun) {
   const lightCol = lerpA([1.08, .88, .66], [1.0, .97, .90], smooth(4, 30, e));
   const shadowCol = [.86, .66, .58];          // warme schaduwkant
 
+  // overgangen: schemering rond de horizon, gouden uur net boven de horizon
+  const twilight = bell(e, -1.5, 6);
+  const golden = bell(e, 5, 5.5) * smooth(-2, 1, e);
+  const glowCol = sun.morning ? [1.0, .58, .64] : [1.0, .50, .24];   // ochtend rozer, avond oranjer
+
   return {
-    day, night, lamps, sunVis,
+    day, night, lamps, sunVis, twilight, golden, glowCol,
     sun: [sunX, sunY], sunDir: sunX < .5 ? -1 : 1,
     skyTop, skyHor, lightCol, shadowCol,
     vig: lerp(.55, .14, day),
