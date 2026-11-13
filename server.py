@@ -100,18 +100,27 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", 0) or 0)
             with LOCK:
                 p = RENDER["proc"]
+                fq = urllib.parse.parse_qs(self.path.partition("?")[2]).get("f")
+                if p and fq and int(fq[0]) != RENDER["frames"]:
+                    # na een herstart: alleen precies het volgende frame aannemen (geen gaten of dubbele frames)
+                    self.rfile.read(length)
+                    msg = "al ontvangen" if int(fq[0]) < RENDER["frames"] else "verwacht frame %d" % RENDER["frames"]
+                    return self.reply(409, msg)
                 if not p or length != RENDER.get("size"):
                     if length:
                         self.rfile.read(length)
                     return self.reply(409, "geen render bezig of verkeerde framegrootte")
-                remaining = length
+                # eerst het hele frame binnen; een afgebroken upload mag nooit een half frame naar ffmpeg sturen
+                data = bytearray()
+                while len(data) < length:
+                    chunk = self.rfile.read(min(length - len(data), 1 << 22))
+                    if not chunk:
+                        break
+                    data += chunk
+                if len(data) != length:
+                    return self.reply(400, "onvolledig frame")
                 try:
-                    while remaining:
-                        chunk = self.rfile.read(min(remaining, 1 << 22))
-                        if not chunk:
-                            break
-                        p.stdin.write(chunk)
-                        remaining -= len(chunk)
+                    p.stdin.write(data)
                 except (BrokenPipeError, OSError) as e:
                     RENDER.update(state="error", error="ffmpeg: " + str(e))
                     return self.reply(500, "ffmpeg fout")

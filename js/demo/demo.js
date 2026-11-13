@@ -103,19 +103,25 @@ export async function runDemo({ renderer, scene, imgSize, glCanvas }) {
 }
 
 // frame voor frame: elk frame als ruwe RGBA naar de server, die het direct aan ffmpeg geeft
+// ?from=N: hervatten vanaf frame N (de server houdt ffmpeg open; tools/render_film.py herstart Chrome als die vastloopt)
 async function renderMovie(renderFrame, comp, ctx, name) {
   const frames = Math.round(DURATION * FPS);
-  const [W, H] = [comp.width || 0, comp.height || 0];
+  const from = +(new URLSearchParams(location.search).get('from') || 0);
   renderFrame(0);
-  const q = `w=${comp.width}&h=${comp.height}&fps=${FPS}&name=${encodeURIComponent(name)}`;
-  let r = await fetch('/render/start?' + q, { method: 'POST' });
-  if (!r.ok) { document.title = 'RENDER-FOUT: ' + await r.text(); return; }
+  let r;
+  if (from === 0) {
+    const q = `w=${comp.width}&h=${comp.height}&fps=${FPS}&name=${encodeURIComponent(name)}&total=${frames}`;
+    r = await fetch('/render/start?' + q, { method: 'POST' });
+    if (!r.ok) { document.title = 'RENDER-FOUT: ' + await r.text(); return; }
+  }
   const t0 = performance.now();
-  for (let f = 0; f < frames; f++) {
+  for (let f = from; f < frames; f++) {
     renderFrame(f / FPS);
     const px = ctx.getImageData(0, 0, comp.width, comp.height).data;
-    r = await fetch('/render/frame', { method: 'PUT', body: px });
+    r = await fetch('/render/frame?f=' + f, { method: 'PUT', body: px });
+    if (r.status === 409 && (await r.text()).startsWith('al ontvangen')) continue;
     if (!r.ok) { document.title = 'RENDER-FOUT bij frame ' + f; return; }
+    if (f % 30 === 0) await new Promise(res => setTimeout(res, 0));   // even ademruimte (geheugen opruimen)
     if (f % 15 === 0) {
       const sec = (performance.now() - t0) / 1000, eta = sec / (f + 1) * (frames - f - 1);
       document.title = `render ${f}/${frames} · nog ${Math.round(eta)} s`;

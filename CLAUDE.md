@@ -2,7 +2,7 @@
 (mapnaam: "Levend schilderij")
 
 ## Visie
-Een webapp die een schilderij laat leven. Het beweegt subtiel en het licht volgt de echte tijd van de dag in Gouda.
+Een webapp die een schilderij laat leven. Het beweegt subtiel, het licht volgt de echte tijd van de dag in Gouda, en het echte weer (en de maanfase) komt mee naar binnen.
 Eerste focus: één schilderij, De Sterrennacht (Van Gogh). Overdag moet dat er echt als dag uitzien, 's nachts als nacht.
 
 ## Over mij
@@ -11,29 +11,40 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 
 ## Starten
 - Dubbelklik `start.bat` → start `server.py` (Python, alleen standaardbibliotheek) en opent http://localhost:8000
-- `?frame` achter de URL = lijst-modus; `tools/masks.html` = masks opnieuw genereren
-- Sneltoetsen: M = masks tonen (debug), F = frame-modus
+- URL-opties: `?frame` = lijst-modus · `?weather=clear|cloudy|drizzle|rain|storm|snow|fog` = weer forceren · `?time=13:00` = vaste tijd · `?moon=0..1` = maanfase (0 nieuw, .5 vol) · `?cover=0.7` = sneeuwdek · `?clean` = zonder knoppen
+- Demo: `?demo` speelt de film af (spatie = pauze, ←/→ = 2 s spoelen); `?demo&t=14&pause` = één exact frame
+- Sneltoetsen: M = masks tonen (debug), F = frame-modus; `tools/masks.html` = masks opnieuw genereren
+
+## Film opnieuw maken
+- `render-film.bat` (eindversie, ~10-20 min) of `render-film.bat concept` (960×540, ~1 min)
+- Dat draait `tools/render_film.py`: start een eigen server op poort 8765 + Chrome zonder venster op `?demo&render=final`; de pagina stuurt elk frame als ruwe RGBA naar `server.py`, die het direct aan ffmpeg geeft (`film/_master-*.mp4`). Daarna: muziek (fade in 2 s / uit 3 s), `film/plein-air-demo-4k.mp4`, `-1080p.mp4` (2-pass, < 16 MB) en 3 stills
+- Alleen opnieuw muxen (bijv. andere muziek): `python tools/render_film.py final --mux`
+- Storyboard/timing aanpassen: `js/demo/timeline.js` (keyframes per scène, bijschriften, titel)
 
 ## Architectuur (data flow per frame)
-`input` → `scene` → `time` → `motion` + `relight` → `render`, met `ui` eromheen; `js/main.js` verbindt ze.
+`input` → `scene` → `time` + `weather` → `motion` + `relight` → `render`, met `ui` eromheen; `js/main.js` verbindt ze. Bij `?demo` neemt `js/demo/` de klok over.
 
 - `js/input/image.js`: afbeelding laden (met retry), schalen naar max 2048 px, helderheid meten. Standaard `assets/sterrennacht.jpg`
 - `js/scene/`
-  - `autoMasks.js`: maakt masks uit kleur + helderheid + positie (grove contouren in de code, verfijnd op het beeld); vindt sterren en maan
+  - `autoMasks.js`: maakt masks uit kleur + helderheid + positie; vindt sterren en maan
   - `flowField.js`: streekrichting per pixel (structure tensor) → `flow.png`
   - `scene.js`: laadt `assets/masks/*.png` + `scene.json` en pakt ze in 2 RGBA-textures (A: lucht, sterren, maan, cipres · B: dorp, ramen, heuvels). Eigen upload → simpele lucht/land-verdeling
-- `js/time/`: `sun.js` zonnestand Gouda (hoogte + kompasrichting) → `profile.js` lichtprofiel: dag, nacht, lampen, schemering, gouden uur, zonpositie, kleuren; vloeiend ge-eased
-- `js/motion/motion.js`: slider → bewegingsklok (staat stil op 0) + sterkte, korrel, zoom
-- `js/relight/relight.js`: profiel → shader-uniforms; de kleurregels per element staan in de shader (blok RELIGHT)
-- `js/render/`: `renderer.js` (WebGL1, textures, uniforms), `quality.js` (adaptieve resolutie), `shaders/main.vert|frag` (MOTION-blok → RELIGHT-blok → debug-overlay)
-- `js/ui/controls.js`: knoppen, sliders, sneltoetsen, frame-modus (fullscreen, wake lock, nachtelijke refresh)
-- `assets/masks/`: grijswaarde-PNG per element (met de hand bij te werken), `flow.png`, `scene.json` (sterren, maan)
-- `tools/masks.html`: genereert en bewaart masks via PUT naar `server.py` (alleen `assets/masks/` is schrijfbaar)
-- `prototype.html`: oud prototype, alleen als referentie
+- `js/time/`: `sun.js` zonnestand Gouda → `profile.js` lichtprofiel (dag, nacht, lampen, schemering, gouden uur, zonpositie, kleuren; vloeiend ge-eased) · `moon.js` maanfase (synodische maand)
+- `js/weather/`: `weather.js` haalt elke 15 min Open-Meteo op (cache in localStorage, anders helder), zet het om in een weather state (cloud, rain, snow, fog, wind 0..1), `applyWeather` dempt het lichtprofiel, `windToMotion` wind → beweging · `state.js` laat de state vloeiend naar het doel lopen en houdt het sneeuwdek bij
+- `js/motion/motion.js`: bewegingswaarde (slider, of "Auto (wind)") → bewegingsklok (staat stil op 0) + sterkte, korrel, zoom; plus de weerklok voor regen/sneeuw
+- `js/relight/relight.js`: profiel → shader-uniforms (incl. maanschijf + fase); de kleurregels staan in de shader
+- `js/render/`: `renderer.js` (WebGL1, meerdere programs, render targets, vaste resolutie voor de film), `quality.js` (adaptieve resolutie), `shaders/main.frag` (MOTION → maanfase → RELIGHT → WEATHER land → ramen/zon/sterren → WEATHER neerslag → demo-print/museumwand → debug), `shaders/room.frag` (de demokamer: tv-frame, lamp, raam met Goudse grachtenpanden en sneeuw)
+- `js/demo/`: `timeline.js` storyboard als pure functie `state(t)` (deterministisch) · `demo.js` eigen klok, kamer-pass, frame-voor-frame renderen · `captions.js` compositor (beeld + zwart + bijschriften + titel op een 2D-canvas)
+- `js/ui/controls.js`: knoppen, sliders, Auto (wind), weerlabel, sneltoetsen, URL-opties, frame-modus
+- `assets/`: `masks/` (grijswaarde-PNG per element, `flow.png`, `scene.json`), `fonts/` (Cormorant Garamond, OFL), `music/` (Gymnopédie No. 1, publiek domein) — bronnen in `CREDITS.md`
+- `server.py`: statische server zonder cache; PUT voor `assets/masks/`; `/render/start|frame|end|status` voor de film
+- `tools/masks.html`, `tools/render_film.py`; `prototype.html`: oud prototype, alleen als referentie
 
 ## Afspraken
 - Plain HTML/JS met ES modules, geen build-stap; lokaal draaien met `start.bat`
 - Eén feature per sessie; begin in plan mode
-- Na elke feature: git commit en ROADMAP.md bijwerken
+- Na elke feature: git commit en ROADMAP.md bijwerken; video's in `film/` staan niet in git
 - Shaderbestanden met de Edit-tool aanpassen (PowerShell `Set-Content` zet een BOM die de shader breekt)
-- Git staat in `C:\Program Files\Git\cmd` (niet in PATH van oudere shells); pip heeft geen internet (SSL), dus beeldbewerking in de browser
+- Kleuren in de shader nooit boven 1 laten komen vóór `pow()` (gaf NaN → zwarte spikkels)
+- Git staat in `C:\Program Files\Git\cmd`; pip heeft geen internet (SSL), dus beeldbewerking in de browser; ffmpeg via winget
+- Testen zonder zichtbaar browservenster: headless Chrome-screenshot van `?clean&...` of `?demo&t=..&pause`

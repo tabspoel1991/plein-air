@@ -55,24 +55,37 @@ def render(version):
     browser = None
     try:
         time.sleep(1.5)
-        url = f"http://localhost:{PORT}/?demo&render={version}"
-        browser = subprocess.Popen([chrome(), "--headless=new", "--use-angle=d3d11", "--enable-gpu-rasterization",
-                                    "--ignore-gpu-blocklist", "--disable-background-timer-throttling",
-                                    "--disable-renderer-backgrounding", "--hide-scrollbars", "--mute-audio",
-                                    f"--user-data-dir={profile}", "--window-size=1280,720", url],
-                                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        t0, last = time.time(), -1
+        def launch(start_frame):
+            url = f"http://localhost:{PORT}/?demo&render={version}" + (f"&from={start_frame}" if start_frame else "")
+            return subprocess.Popen([chrome(), "--headless=new", "--use-angle=d3d11", "--enable-gpu-rasterization",
+                                     "--ignore-gpu-blocklist", "--disable-background-timer-throttling",
+                                     "--disable-renderer-backgrounding", "--hide-scrollbars", "--mute-audio",
+                                     f"--user-data-dir={profile}", "--window-size=1280,720", url],
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        browser = launch(0)
+        t0, last, last_change, last_print, restarts = time.time(), -1, time.time(), 0, 0
         while True:
             time.sleep(2)
             st = status()
-            if st["frames"] != last and st["frames"] % 60 < 2:
-                el = time.time() - t0
-                print(f"  frame {st['frames']}/1800  ({el:.0f} s)", flush=True)
-            last = st["frames"]
+            if st["frames"] != last:
+                last, last_change = st["frames"], time.time()
+            if time.time() - last_print > 30:
+                last_print = time.time()
+                print(f"  frame {st['frames']}/1800  ({time.time() - t0:.0f} s)", flush=True)
             if st["state"] == "done":
                 break
             if st["state"] == "error":
                 sys.exit("Render mislukt: " + st["error"])
+            # waakhond: Chrome kan bij 4K vastlopen; dan herstarten en verdergaan bij het volgende frame
+            if st["state"] == "rendering" and time.time() - last_change > 45:
+                restarts += 1
+                if restarts > 30:
+                    sys.exit("Chrome blijft vastlopen; render gestopt.")
+                print(f"  Chrome reageert niet meer: herstart bij frame {st['frames']} (keer {restarts})", flush=True)
+                browser.kill(); browser.wait()
+                time.sleep(2)
+                browser = launch(st["frames"])
+                last_change = time.time()
             if time.time() - t0 > 4 * 3600:
                 sys.exit("Render duurt te lang (meer dan 4 uur).")
         print(f"  klaar in {time.time() - t0:.0f} s -> {st['out']}")

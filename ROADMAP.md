@@ -66,9 +66,12 @@
 - Kamer is zelf geschilderd (shader) in plaats van een foto: Unsplash/Pexels blokkeerden downloads, geen geschikte vrije foto op Wikimedia (zie CREDITS.md)
 
 ## 10. Film renderen
-- [ ] Muziek: Satie, Gymnopédie No. 1 (vrije licentie, bron in CREDITS.md)
-- [ ] Frame voor frame renderen naar ffmpeg; conceptversie bekeken en verbeterd
-- [ ] `film/plein-air-demo-4k.mp4`, `film/plein-air-demo-1080p.mp4`, 3 stills
+- [x] Muziek: Satie, Gymnopédie No. 1, Robin Alciatore (Musopen, publiek domein); fade in 2 s, uit 3 s (CREDITS.md)
+- [x] Frame voor frame: de browser stuurt elk frame naar `server.py`, die het direct aan ffmpeg geeft (`render-film.bat`)
+- [x] Conceptversie bekeken en verbeterd (museumlabel in de marge, maan pas in de sneeuwnacht, kamer en uitzicht verfijnd)
+- [x] `film/plein-air-demo-4k.mp4` (3840×2160, 30 fps, 404 MB), `film/plein-air-demo-1080p.mp4` (12,4 MB), 3 stills
+- Eerste 4K-poging liep vast op frame 255: Chrome zonder venster crasht soms bij 4K. Opgelost met een waakhond die Chrome herstart en verdergaat bij het volgende frame (7 herstarts in de eindrender, geen gaten: 1800 frames, 60,0 s)
+- Video's staan niet in git; `film/_master-*.mp4` zijn tussenbestanden (nodig voor `--mux`, mogen weg)
 
 ## Later
 - Seizoenen
