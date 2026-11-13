@@ -1,18 +1,16 @@
-// relight/ — lichtprofiel + helderheid van het schilderij → shader-uniforms voor kleur en licht.
+// relight/ — lichtprofiel + scene → shader-uniforms voor kleur en licht per element.
+// De eigenlijke kleurregels per element staan in de shader (render/shaders/main.frag,
+// blok RELIGHT); dit module vertaalt het profiel naar die invoer.
 
-export function relightUniforms(p, srcLuma) {
-  const k = Math.min(2.5, Math.max(.3, Math.log(p.L) / Math.log(srcLuma)));
+export function relightUniforms(p, scene) {
+  // de zon wordt "geschilderd" met de penseelstreken van de grootste ster
+  const big = scene.stars.reduce((a, s) => (!a || s.r > a.r ? s : a), null);
   return {
-    u_k: k,
-    u_con: 1 + Math.max(0, 1 - k) * .55,
-    u_expo: p.expo,
-    u_sat: p.sat * (1 + Math.max(0, 1 - k) * .35),
-    u_skyAmt: p.skyA,
+    u_day: p.day, u_night: p.night, u_lamps: p.lamps,
+    u_sun: [p.sun[0], p.sun[1], p.sunVis], u_sunDir: p.sunDir,
+    u_sunSrc: big ? [big.x, big.y, big.r] : [0, 0, 0],
+    u_skyTop: p.skyTop, u_skyHor: p.skyHor,
+    u_lightCol: p.lightCol, u_shadowCol: p.shadowCol,
     u_vig: p.vig,
-    u_stars: p.stars,
-    u_glow: p.glow,
-    u_gain: p.gain,
-    u_sky: p.sky,
-    u_horizon: p.hor,
   };
 }

@@ -70,8 +70,9 @@ export async function createRenderer(canvas, { vert, frag }) {
   function resize(scale = 1) {
     const dpr = Math.min(window.devicePixelRatio || 1, 2) * scale;
     const w = Math.max(64, Math.round(innerWidth * dpr)), h = Math.max(64, Math.round(innerHeight * dpr));
-    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; gl.viewport(0, 0, w, h); }
-    return [w, h];
+    if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h; }
+    gl.viewport(0, 0, canvas.width, canvas.height); // elk frame: blijft kloppen na zoom/rotatie
+    return [canvas.width, canvas.height];
   }
 
   const draw = () => gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);

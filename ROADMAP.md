@@ -25,10 +25,11 @@
 - [x] Alles volgt de motion-slider
 
 ## 4. Dag ↔ nacht per element
-- [ ] Lucht: donkerblauw → daglucht, penseelstreken blijven zichtbaar
-- [ ] Sterren en maan vervagen overdag, zon verschijnt
-- [ ] Ramen: licht aan 's nachts, uit overdag
-- [ ] Heuvels, cipres en dorp: daglicht met schaduw
+- [x] Lucht: donkerblauw → daglucht, penseelstreken blijven zichtbaar (kleur verschuift, textuur blijft)
+- [x] Sterren en maan vervagen overdag, zon verschijnt (geschilderd met de streken van de grootste ster, volgt de echte zonnestand)
+- [x] Ramen: licht aan in avond en nacht met zachte gloed, uit overdag
+- [x] Heuvels, cipres en dorp: helder daglicht met warme schaduwkant; 's nachts donker en koel
+- [x] Overgangen vloeiend (alle waarden lopen geleidelijk mee met de zonshoogte)
 
 ## 5. Overgangen
 - [ ] Zonsopkomst en zonsondergang als kleurverloop over de horizon

@@ -1,4 +1,4 @@
-// time/ — zonnestand voor Gouda (NOAA-benadering).
+// time/ — zonnestand voor Gouda (NOAA-benadering): hoogte en kompasrichting.
 
 export const GOUDA = { lat: 52.011, lon: 4.711 };
 
@@ -13,5 +13,8 @@ export function sunPosition(date, { lat, lon } = GOUDA) {
   const tst = hr * 60 + eqt + 4 * lon;
   const ha = (tst / 4 - 180) * rad, la = lat * rad;
   const cz = Math.sin(la) * Math.sin(decl) + Math.cos(la) * Math.cos(decl) * Math.cos(ha);
-  return { elev: 90 - Math.acos(Math.min(1, Math.max(-1, cz))) / rad, morning: ha < 0 };
+  const zen = Math.acos(Math.min(1, Math.max(-1, cz)));
+  // kompasrichting: 90 = oost, 180 = zuid, 270 = west
+  const az = (Math.atan2(Math.sin(ha), Math.cos(ha) * Math.sin(la) - Math.tan(decl) * Math.cos(la)) / rad + 180 + 360) % 360;
+  return { elev: 90 - zen / rad, az, morning: ha < 0 };
 }

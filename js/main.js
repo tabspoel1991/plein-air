@@ -47,7 +47,7 @@ async function start() {
     const uniforms = {
       u_res: res, u_img: imgSize, u_t: (now - t0) / 1000,
       ...motion.update(ui.motion, dt),
-      ...relightUniforms(profile, srcLuma),
+      ...relightUniforms(profile, scene),
       u_debug: ui.debug ? 1 : 0,
       'u_star[0]': scene.starData, u_starCount: scene.stars.length,
       u_moon: scene.moon ? [scene.moon.x, scene.moon.y, scene.moon.r] : [-1, -1, 0],
