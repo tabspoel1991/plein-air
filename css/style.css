@@ -3,6 +3,8 @@
 html, body { height: 100%; background: #0b0a09; overflow: hidden; color: var(--txt); font-family: Inter, system-ui, sans-serif; }
 canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 body.idle { cursor: none; }
+body.frame, body.frame * { cursor: none !important; }
+body.frame .bar, body.frame .title, body.frame .legend { display: none !important; }
 
 .bar {
   position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);

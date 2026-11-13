@@ -21,12 +21,49 @@ export function initUI({ onFile }) {
 
   $('fs').addEventListener('click', toggleFullscreen);
 
-  // sneltoetsen: M = masks tonen (debug)
+  // sneltoetsen: M = masks tonen (debug), F = frame-modus
   state.debug = false;
   addEventListener('keydown', e => {
     if (e.target.tagName === 'INPUT' && e.target.type !== 'range') return;
     if (e.key === 'm' || e.key === 'M') { state.debug = !state.debug; $('legend').classList.toggle('show', state.debug); }
+    if (e.key === 'f' || e.key === 'F') setFrame(!state.frame);
   });
+  $('frameBtn').addEventListener('click', () => setFrame(true));
+
+  // ---- frame-modus: fullscreen, geen knoppen, geen cursor, altijd de echte tijd ----
+  state.frame = false;
+  const fromUrl = new URLSearchParams(location.search).has('frame');
+  let wakeLock = null;
+  async function keepAwake(on) {
+    try {
+      if (on && 'wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen');
+      else if (!on && wakeLock) { await wakeLock.release(); wakeLock = null; }
+    } catch (e) { /* niet ondersteund */ }
+  }
+  function setFrame(on) {
+    state.frame = on;
+    document.body.classList.toggle('frame', on);
+    if (on) {
+      state.live = true; liveBtn.classList.add('on');
+      state.debug = false; $('legend').classList.remove('show');
+      if (!document.fullscreenElement) toggleFullscreen();
+    } else if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+    keepAwake(on);
+  }
+  // fullscreen mag pas na een klik/tik: bij ?frame proberen we het direct, en anders bij de eerste aanraking
+  const firstGesture = () => { if (state.frame && !document.fullscreenElement) toggleFullscreen(); };
+  ['pointerdown', 'keydown', 'touchend'].forEach(ev => addEventListener(ev, firstGesture));
+  document.addEventListener('fullscreenchange', () => {
+    if (!document.fullscreenElement && state.frame && !fromUrl) setFrame(false); // Esc verlaat de frame-modus
+  });
+  document.addEventListener('visibilitychange', () => { if (state.frame && document.visibilityState === 'visible') keepAwake(true); });
+  if (fromUrl) setFrame(true);
+
+  // een lijst die dagen aan staat: elke nacht om 04:00 even verversen (frisse klok, geen geheugenopbouw)
+  setInterval(() => {
+    const d = new Date();
+    if (state.frame && d.getHours() === 4 && d.getMinutes() === 0 && performance.now() > 120000) location.reload();
+  }, 30000);
 
   // knoppen verbergen na stilte, zodat het als lijst aan de muur werkt
   let idleT;

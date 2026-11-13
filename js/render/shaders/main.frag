@@ -1,4 +1,8 @@
+#ifdef GL_FRAGMENT_PRECISION_HIGH
 precision highp float;
+#else
+precision mediump float; // oudere tablets
+#endif
 varying vec2 v_uv;
 
 uniform sampler2D u_tex;

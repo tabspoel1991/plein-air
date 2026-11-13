@@ -42,7 +42,11 @@ function starArray(stars) {
 
 export async function loadScene() {
   try {
-    const meta = await (await fetch(MASK_DIR + 'scene.json')).json();
+    let meta;
+    for (let i = 1; !meta; i++) {
+      try { meta = await (await fetch(MASK_DIR + 'scene.json')).json(); }
+      catch (e) { if (i >= 3) throw e; await new Promise(r => setTimeout(r, 300 * i)); }
+    }
     const w = meta.width, h = meta.height;
     const [flow, ...imgs] = await Promise.all([loadImage(MASK_DIR + 'flow.png').catch(() => null), ...MASK_NAMES.map(n => loadImage(MASK_DIR + n + '.png'))]);
     const masks = {}; MASK_NAMES.forEach((n, i) => { masks[n] = grayFromImage(imgs[i], w, h); });

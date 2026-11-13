@@ -37,8 +37,11 @@
 - [x] Gouden uur: warm strijklicht op de zonkant van de cipres en op de daken
 
 ## 6. Frame-modus
-- [ ] Opent direct fullscreen, geen knoppen
-- [ ] Draait stabiel op een oude tablet of tv
+- [x] Toets F, knop "Lijst" of `?frame` in de URL: geen knoppen, geen cursor, altijd de echte tijd, scherm blijft aan
+- [x] Fullscreen: met F/knop direct; bij `?frame` blokkeert de browser dat tot de eerste tik op het scherm (browserregel)
+- [x] Adaptieve resolutie: bij haperen (onder ~40 fps) omlaag tot 35%, daarna langzaam terug; in frame-modus max ~1,25 pixel per css-pixel
+- [x] Robuust voor dagenlang draaien: shader valt terug op lagere precisie op oude GPU's, pagina ververst elke nacht om 04:00
+- Nog niet getest op een echte oude tablet of tv
 
 ## Later
 - Weer in Gouda (regen, bewolking)

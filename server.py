@@ -15,6 +15,7 @@ PORT = int(sys.argv[1]) if len(sys.argv) > 1 else 8000
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"  # verbindingen hergebruiken: minder kans op afgebroken downloads
     extensions_map = {
         **http.server.SimpleHTTPRequestHandler.extensions_map,
         ".js": "text/javascript",

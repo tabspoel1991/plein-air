@@ -6,13 +6,21 @@ export const DEFAULT_PAINTING = {
   id: 'sterrennacht',
 };
 
-export function loadImage(url) {
+function loadOnce(url) {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.onload = () => resolve(img);
     img.onerror = () => reject(new Error('Kan afbeelding niet laden: ' + url));
     img.src = url;
   });
+}
+
+// Probeert het tot 3× (een haperende verbinding mag het schilderij niet blokkeren).
+export async function loadImage(url, tries = 3) {
+  for (let i = 1; ; i++) {
+    try { return await loadOnce(i === 1 ? url : url + (url.includes('?') ? '&' : '?') + 'retry=' + i); }
+    catch (e) { if (i >= tries || url.startsWith('blob:')) throw e; await new Promise(r => setTimeout(r, 300 * i)); }
+  }
 }
 
 export async function loadImageFile(file) {

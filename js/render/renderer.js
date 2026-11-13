@@ -1,9 +1,13 @@
 // render/ — WebGL shader pipeline die elk frame tekent.
 
-async function fetchText(url) {
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('Kan shader niet laden: ' + url);
-  return r.text();
+async function fetchText(url, tries = 3) {
+  for (let i = 1; ; i++) {
+    try {
+      const r = await fetch(url);
+      if (!r.ok) throw new Error('Kan shader niet laden: ' + url);
+      return await r.text();
+    } catch (e) { if (i >= tries) throw e; await new Promise(res => setTimeout(res, 300 * i)); }
+  }
 }
 
 export async function createRenderer(canvas, { vert, frag }) {

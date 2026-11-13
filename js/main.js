@@ -5,6 +5,7 @@ import { lightProfile, phaseName, easeProfile } from './time/profile.js';
 import { relightUniforms } from './relight/relight.js';
 import { createMotion } from './motion/motion.js';
 import { createRenderer } from './render/renderer.js';
+import { createQuality } from './render/quality.js';
 import { loadScene, genericScene } from './scene/scene.js';
 import { initUI } from './ui/controls.js';
 
@@ -35,12 +36,15 @@ async function start() {
   const [img, sc] = await Promise.all([loadImage(DEFAULT_PAINTING.url), loadScene()]);
   setPainting(img, DEFAULT_PAINTING.name, sc);
 
-  const motion = createMotion();
+  const motion = createMotion(), quality = createQuality();
   let profile = null, last = performance.now();
   const t0 = last;
   function frame(now) {
-    const dt = Math.min(.25, (now - last) / 1000); last = now;
-    const res = renderer.resize();
+    const rawDt = (now - last) / 1000, dt = Math.min(.25, rawDt); last = now;
+    // frame-modus: hooguit ~1.25 beeldpunten per css-pixel (scheelt veel op tablets met een scherp scherm)
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    quality.setMax(ui.frame ? Math.min(1, 1.25 / dpr) : 1);
+    const res = renderer.resize(quality.update(rawDt));
     const date = ui.targetDate(), sun = sunPosition(date);
     profile = easeProfile(profile, lightProfile(sun), dt);
     ui.showTime(date, phaseName(sun));
@@ -53,7 +57,7 @@ async function start() {
       u_moon: scene.moon ? [scene.moon.x, scene.moon.y, scene.moon.r] : [-1, -1, 0],
     };
     renderer.setUniforms(uniforms);
-    window.__levend = { uniforms, profile, sun, ui }; // alleen voor testen/debuggen
+    window.__levend = { uniforms, profile, sun, ui, quality }; // alleen voor testen/debuggen
     renderer.draw();
     requestAnimationFrame(frame);
   }
