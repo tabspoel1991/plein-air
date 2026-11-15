@@ -96,8 +96,15 @@
 - [x] Ook meer sneeuw op de lichte kant van de cipres
 - [x] Testen: `?weather=snow&cover=0.7` met `&time=13:00`, `&time=16:15` of `&time=23:00&moon=.5`; voor/na-beelden in `film/feature13/`
 
+## 14. Mist en wolken als wervelende streken
+- [x] Eén gedeelde "wervel"-functie in de shader: ruis uitgesmeerd langs het flow field (in beide richtingen), zodat wolken dezelfde wervels volgen als Van Goghs lucht; drijft traag met de wind mee
+- [x] Wolken zijn licht/donker-streken in plaats van een grijs vlak; 's nachts een zilveren rand bij de maan
+- [x] Gaten in de wolken drijven voorbij: sterren, maan (ook de maanfase-schijf) en zon schijnen er af en toe doorheen
+- [x] Mist in lange horizontale banen tussen heuvels en dorp, met dunne slierten in de lucht; sterren blijven op dunne plekken zichtbaar
+- [x] Testen: `?weather=cloudy` of `?weather=fog`, met `&time=13:00` of `&time=23:00&moon=.5`; voor/na-beelden in `film/feature14/`
+- In de sterkransen draait het flow field rond; daar zijn de wolkenstreken bewust zachter
+
 ## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
-- [ ] 14. Mist en wolken als wervelende streken
 - [ ] 15. GitHub-backup (online versiebeheer)
 - [ ] 16. Datumkiezer: elke dag met echte zon, maan en historisch weer van Gouda (`?date=`)
 - [ ] 17. Op de telefoon via GitHub Pages

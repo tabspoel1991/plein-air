@@ -54,6 +54,33 @@ vec2 cover(vec2 uv) { float rs = u_res.x / u_res.y, ri = u_img.x / u_img.y;
   s = mix(s, sc, u_contain);
   return (uv - .5) * s + .5 + vec2(0., u_pan); }
 
+// WEATHER: wolken en mist als wervelende streken. Ruis wordt langs het flow field uitgesmeerd
+// (8 stappen langs de streekrichting), zodat ze dezelfde wervels volgen als Van Goghs lucht;
+// de ruis drijft met de wind mee. Geeft 0..1 (licht/donker van de streek).
+vec2 cloudDrift() { return vec2(-u_wt * .004 * (.4 + abs(u_wind)) * sign(u_wind + .001), u_wt * .0006); }
+float swirl(vec2 q, float aspect) {
+  vec2 dr = cloudDrift() * 9.;
+  vec2 f0 = texture2D(u_flow, q).rg * 2. - 1.; f0 = f0 / (length(f0) + 1e-4);
+  float s = noise(q * vec2(aspect, 1.) * 30. + dr) * .7 + noise(q * vec2(aspect, 1.) * 70. + dr * 1.3) * .3;
+  // symmetrisch: 4 stappen vooruit en 4 terug, zodat de (tekenloze) streekrichting geen naden geeft
+  for (int k = 0; k < 2; k++) {
+    vec2 x = q, prev = k == 0 ? f0 : -f0;
+    for (int i = 0; i < 4; i++) {
+      vec2 f = texture2D(u_flow, x).rg * 2. - 1.;
+      f = f / (length(f) + 1e-4); f *= sign(dot(f, prev) + 1e-4); prev = f;
+      x += f * vec2(1. / aspect, 1.) * .007;
+      s += noise(x * vec2(aspect, 1.) * 30. + dr) * .7 + noise(x * vec2(aspect, 1.) * 70. + dr * 1.3) * .3;
+    }
+  }
+  return smoothstep(0., 1., (s / 9. - .5) * 2.2 + .5);
+}
+// grove wolkendekking: waar de wolken open zijn drijven gaten voorbij (sterren, maan en zon schijnen erdoor)
+float cloudCov(vec2 q, float streak) {
+  vec2 d = cloudDrift();
+  float cn = noise(q * vec2(2.4, 4.2) + d) * .65 + noise(q * vec2(6., 9.) + d * 1.7) * .35;
+  return smoothstep(cn - .22, cn + .22, u_cloud + (streak - .5) * .3 * smoothstep(.1, .5, u_cloud));
+}
+
 // zachte versie van een mask-kanaal (5 taps), zodat verplaatsingen geen randen scheuren
 vec4 softA(vec2 p) { float e = .008;
   return (texture2D(u_maskA, p) * 2. + texture2D(u_maskA, p + vec2(e, 0)) + texture2D(u_maskA, p - vec2(e, 0))
@@ -138,9 +165,7 @@ void main() {
       float jag = (noise(md * 5. + 3.7) - .5) * .14;                     // rafelige penseelrand
       float diskK = smoothstep(1.1, .98, ml + jag * .6) * (1. - smoothstep(.2, .55, u_day)) * (1. - u_moonOrig); // overdag: geen donkere schijf
       // achter wolken of mist: de nieuwe schijf verdwijnt mee (zelfde wolkenvlekken als de lucht)
-      vec2 cd0 = vec2(-u_wt * .004 * (.4 + abs(u_wind)) * sign(u_wind + .001), 0.);
-      float mcn = noise(u_moonDisk.xy * vec2(2.4, 4.2) + cd0) * .65 + noise(u_moonDisk.xy * vec2(6., 9.) + cd0 * 1.7) * .35;
-      diskK *= (1. - smoothstep(mcn - .22, mcn + .22, u_cloud) * .92) * (1. - u_fog * .85);
+      diskK *= (1. - cloudCov(u_moonDisk.xy, .5) * .92) * (1. - u_fog * .75);
       float limb = smoothstep(1.04, .97, ml + jag * .5);                  // binnen de maanrand
       float sy = sqrt(max(0., 1. - md.y * md.y));
       float mph = u_moonPhase;
@@ -201,11 +226,13 @@ void main() {
   // hoger in de lucht een paarsige zweem tijdens de schemering
   skyC = mix(skyC, skyC * vec3(1.08, .92, 1.06), u_twilight * (1. - horizonK) * .5);
 
-  // WEATHER (bewolking): trage wolkenvlakken die met de wind meedrijven; ze verbergen sterren en zon deels
-  vec2 cdrift = vec2(-u_wt * .004 * (.4 + abs(u_wind)) * sign(u_wind + .001), 0.);
-  float cn = noise(iuv * vec2(2.4, 4.2) + cdrift) * .65 + noise(iuv * vec2(6., 9.) + cdrift * 1.7) * .35;
-  float cov = smoothstep(cn - .22, cn + .22, u_cloud);
-  float hide = clamp(1. - cov * .92, 0., 1.) * (1. - u_fog * .85);
+  // WEATHER (bewolking): wervelende streken die met de wind meedrijven; ze verbergen sterren en zon deels,
+  // maar door de gaten en dunne plekken schijnen ze af en toe door
+  float streak = u_cloud + u_fog > .01 ? swirl(iuv, aspect) : .5;
+  // in de sterkransen draait het flow field rond: daar de streken zachter, anders ontstaan harde vlekken
+  streak = mix(streak, .5 + (streak - .5) * .25, clamp((mA0.g + mA0.b) * 1.6, 0., 1.));
+  float cov = cloudCov(iuv, streak);
+  float hide = clamp(1. - cov * .92, 0., 1.) * (1. - u_fog * (.55 + .4 * streak));
   presence *= hide;
 
   // sterren en maan: zichtbaar (gloeiend) of opgegaan in de lucht, per ster op zijn eigen moment
@@ -217,13 +244,21 @@ void main() {
   vec3 starlit = skyC + orig * nightK * .18;
   skyC = mix(skyC, mix(starless, starlit, presence), sm);
 
-  // bewolkte lucht: grijzer en vlakker, de penseelstreken blijven zwak zichtbaar
+  // bewolkte lucht: geschilderde wolkenstreken (licht en donker) die de wervels volgen; de verf eronder blijft licht zichtbaar
   float covK = clamp(u_cloud * (.35 + .65 * cov), 0., 1.);
-  vec3 cloudDay = mix(u_skyHor, u_skyTop, .4) * (.9 + .5 * (Lm - .42)) + detail * .55;
-  vec3 cloudNight = vec3(.075, .09, .135) * (.8 + Lm * .9) + detail * .3;
+  float st2 = streak - .5;
+  vec3 cloudDay = mix(u_skyHor, u_skyTop, .4) * (.9 + .5 * (Lm - .42)) + detail * .35;
+  cloudDay = mix(cloudDay * vec3(.80, .85, .95), mix(cloudDay, vec3(.95, .95, .96), .45), smoothstep(-.35, .35, st2));
+  vec3 cloudNight = vec3(.075, .09, .135) * (.8 + Lm * .9) + detail * .25;
+  cloudNight = mix(cloudNight * .72, cloudNight * 1.6 + vec3(.02, .025, .04), smoothstep(-.35, .35, st2));
+  // maanlicht langs de wolkenstreken: een zilveren rand dicht bij de maan
+  if (u_moon.z > 0.) {
+    float md2 = length((iuv - u_moon.xy) * vec2(aspect, 1.));
+    cloudNight += vec3(.30, .32, .36) * exp(-md2 * 5.) * (.5 - .5 * cos(6.2832 * u_moonPhase)) * smoothstep(0., .4, st2);
+  }
   vec3 cloudC = mix(cloudNight, cloudDay, day);
-  cloudC = mix(cloudC, glowSky * .85, tw * .4);
-  skyC = mix(skyC, cloudC, covK * .88);
+  cloudC = mix(cloudC, glowSky * (.75 + .3 * st2), tw * .4);
+  skyC = mix(skyC, clamp(cloudC, 0., 1.), covK * (.8 + .18 * streak));
 
   // --- LANDSCHAP: helder daglicht met warme schaduwkant; 's nachts donker en koel ---
   // licht/schaduw: lichte streken vangen zonlicht, donkere streken liggen in (warme) schaduw
@@ -361,15 +396,23 @@ void main() {
     }
   }
 
-  // mist: dorp en heuvels verzachten (streken vervagen) en lossen op naar de horizon
+  // mist: dorp en heuvels verzachten (streken vervagen) en lossen op naar de horizon.
+  // De mist ligt in lange horizontale banen tussen heuvels en dorp die traag met de wind meedrijven;
+  // in de lucht dunne slierten die de wervels volgen
   float depth = smoothstep(.98, .5, iuv.y) * (1. - cyp * .5);
   if (u_fog > .001) {
     vec3 blurC = c - (orig - Cm) * (.55 + .35 * day);
-    c = mix(c, blurC, u_fog * (.4 + .5 * land));
+    c = mix(c, blurC, u_fog * (.35 + .45 * land));
+    vec2 fq = iuv * vec2(aspect, 1.);
+    float fdr = u_wt * .006 * (.3 + abs(u_wind)) * sign(u_wind + .001);
+    float band = noise(vec2(fq.x * 1.6 - fdr, fq.y * 14.)) * .6 + noise(vec2(fq.x * 4.5 - fdr * 1.7, fq.y * 32. + 3.)) * .4;
+    band = smoothstep(.3, .72, band);
+    float zone = smoothstep(.55, .7, iuv.y) * (1. - smoothstep(.95, 1.02, iuv.y));   // tussen heuvels en dorp
     vec3 fogCol = mix(vec3(.2, .22, .29), vec3(.77, .78, .80), day);
     fogCol = mix(fogCol, u_glowCol * .7 + .22, tw * .3);
-    float fk = u_fog * (land * (.2 + .72 * depth) + sky * .6);
-    c = mix(c, fogCol * (.93 + .25 * (Lm - .42)), fk);
+    fogCol *= .94 + mix(.26, .14, day) * (band - .5) + .1 * (streak - .5) * sky;     // geschilderde banen, geen egaal waas
+    float fk = u_fog * (land * (.12 + .5 * depth + .38 * band * zone) + sky * (.28 + .4 * streak));
+    c = mix(c, clamp(fogCol * (.93 + .25 * (Lm - .42)), 0., 1.), clamp(fk, 0., 1.));
   }
 
   // --- RAMEN: licht aan in avond en nacht, met zachte gloed; overdag uit ---
@@ -382,8 +425,7 @@ void main() {
   if (u_sun.z > .001) {
     vec2 sd = (iuv - u_sun.xy) * vec2(aspect, 1.);
     float sr = .085, len = length(sd);
-    float scn = noise(u_sun.xy * vec2(2.4, 4.2) + cdrift) * .65 + noise(u_sun.xy * vec2(6., 9.) + cdrift * 1.7) * .35;
-    float sunHide = 1. - smoothstep(scn - .22, scn + .22, u_cloud) * .88;
+    float sunHide = 1. - cloudCov(u_sun.xy, .5) * .88;
     float vis = u_sun.z * sky * sunHide * (1. - u_fog * .7);
     if (len < sr * 2.5 && vis > .001) {
       float ang = t * .05; mat2 rot = mat2(cos(ang), -sin(ang), sin(ang), cos(ang));
@@ -413,7 +455,7 @@ void main() {
       float on = smoothstep(own * .8, own * .8 + .15, u_night);
       float s = smoothstep(.13, 0., length(f)) * twk;
       float dark = 1. - smoothstep(.08, .32, dot(c, LUM));
-      c += vec3(.9, .95, 1.) * s * on * sky * dark * 1.1 * (1. - covK) * (1. - u_fog);
+      c += vec3(.9, .95, 1.) * s * on * sky * dark * 1.1 * (1. - covK) * (1. - u_fog * (.6 + .4 * streak));
     }
   }
 
