@@ -299,6 +299,21 @@ void main() {
   c = mix(c, vec3(dot(c, LUM)), .28 * u_cloud * land);
   c *= 1. - (.1 * u_cloud * day + .14 * u_rain) * land;
 
+  // natte daken en straten: glans op de verfribbels (normal map van het verfreliëf);
+  // overdag koel licht uit de lucht, 's avonds en 's nachts warm lamplicht bij de ramen
+  if (u_rain > .001) {
+    vec2 rnw = texture2D(u_relief, iuv).rg * 2. - 1.;
+    vec3 Nw = vec3(rnw, sqrt(max(.05, 1. - dot(rnw, rnw))));
+    vec3 Lw = normalize(vec3(0., -.55, .83));                              // licht van boven (y loopt omlaag)
+    float gl = pow(clamp(dot(reflect(-Lw, Nw), vec3(0., 0., 1.)), 0., 1.), 18.);
+    float ridge = clamp((dot(Nw, Lw) - Lw.z) * 3., 0., 1.);
+    float wet = u_rain * (vil * .9 + hil * .22 + cyp * .12) * (1. - win);
+    c = clamp(c, 0., 1.);
+    c += mix(vec3(.26, .32, .46), vec3(.78, .83, .90), day) * (gl * .4 + ridge * .14) * wet;
+    c += vec3(1., .66, .32) * min(winGlow * 1.6, 1.) * u_lamps * wet * (gl * 2.4 + ridge * 1.1 + .2);
+    c = clamp(c, 0., 1.);
+  }
+
   // sneeuwdek: eerst op de bovenranden van daken en heuvels, daarna steeds meer
   if (u_snowCover > .001) {
     float vilUp = texture2D(u_maskB, iuv - vec2(0., .012)).r;
@@ -374,28 +389,52 @@ void main() {
 
   // ---------- WEATHER (neerslag): geschilderde streken en vlokken voor alles ----------
   vec2 P = iuv * vec2(aspect, 1.);
-  // regen: korte, schuine streken (de wind bepaalt de schuinte); motregen dun en schaars, een bui dicht
+  // regen: korte, taps toelopende penseelstreken in de blauwen en groenen van het schilderij.
+  // De wind bepaalt de schuinte; in de lucht buigen ze deels mee met Van Goghs streekrichting (flow field).
+  // Motregen = fijn en schaars, regen = dichter, storm = een derde laag, langer en schuiner.
   if (u_rain > .001) {
+    float storm = smoothstep(.8, 1., u_rain);
     vec2 vel = normalize(vec2(u_wind * .6 + .1, 1.));
     vec2 Q = vec2(vel.y * P.x - vel.x * P.y, vel.x * P.x + vel.y * P.y);
-    for (int l = 0; l < 2; l++) {
-      float fl2 = float(l), sc = 1. + fl2 * .7;
-      vec2 cs = vec2(.016, .085) / sc;
-      vec2 g = Q / cs;
-      g.y -= u_wt * (1.5 + fl2 * .4) / cs.y + hash(vec2(floor(g.x), fl2)) * 9.;
-      vec2 cell = floor(g), f = fract(g);
-      float h = hash(cell + fl2 * 17.);
-      if (h < .12 + .6 * u_rain) {
-        float len = .3 + .45 * u_rain, cy = hash(cell + 5.7) * (1. - len);
-        float along = (f.y - cy) / len;
-        float dx = abs(f.x - .2 - .6 * hash(cell + 3.1)) * cs.x;
-        float w = (.0012 + .0016 * u_rain) / sc;
-        float a = smoothstep(w, w * .25, dx) * smoothstep(0., .2, along) * smoothstep(1., .55, along);
-        a *= .55 + .45 * noise(vec2(along * 6., cell.x * 3.1));        // penseeltextuur
-        // overdag blauwgrijze streken (contrast met de grijze lucht), 's nachts lichter
-        vec3 rc = mix(vec3(.52, .60, .76), vec3(.34, .41, .54), day) * (.85 + .3 * h);
-        rc = mix(rc, vec3(.92, .94, .98), .25 * day * step(.5, hash(cell + 8.8)));
-        c = mix(c, rc, a * (.3 + .45 * u_rain) * (1. - fl2 * .3));
+    vec2 fo = fl.rg * 2. - 1.; fo = fo / (length(fo) + 1e-4);
+    fo *= sign(dot(fo, vel) + 1e-4);                                    // streekrichting met de val mee
+    vec2 sd = normalize(mix(vel, fo, .3 * fl.b * skyW * (1. - storm * .6) + .06 * fl.b));
+    vec2 dq = vec2(vel.y * sd.x - vel.x * sd.y, vel.x * sd.x + vel.y * sd.y); // richting van de streek in Q
+    vec2 nq = vec2(-dq.y, dq.x);
+    for (int l = 0; l < 3; l++) {
+      float fl2 = float(l);
+      float layerK = l == 2 ? storm : 1.;
+      if (layerK < .01) break;
+      float sc = 1. + fl2 * .7;
+      vec2 cs = vec2(.024, .11) / sc;
+      float speed = (1.5 + fl2 * .4 + storm * .9) / cs.y;
+      float len = (.38 + .32 * u_rain + .2 * storm) * cs.y;             // lengte in hoogte-eenheden
+      float W = (.0019 + .0024 * u_rain) / sc;                           // halve dikte
+      float gx = Q.x / cs.x;
+      for (int k = -1; k <= 1; k++) {                                    // buren: schuine streken mogen over de celrand
+        float col = floor(gx) + float(k);
+        float gy = Q.y / cs.y - u_wt * speed - hash(vec2(col, fl2)) * 9.;
+        vec2 cell = vec2(col, floor(gy));
+        float h = hash(cell + fl2 * 17.);
+        if (h > (.10 + .55 * u_rain) * layerK) continue;
+        vec2 r = vec2((gx - col - .25 - .5 * hash(cell + 3.1)) * cs.x, (gy - cell.y - .5) * cs.y);
+        float along = dot(r, dq) / len + .5;                             // 0 = kop, 1 = staart
+        if (along < 0. || along > 1.) continue;
+        float bend = (hash(cell + 6.2) - .5) * 2.;
+        float across = dot(r, nq) + bend * W * 2. * (along - .5) * (along - .5) * 4.;
+        float wa = W * (.3 + .7 * pow(sin(3.1416 * along), .7)) * (1.1 - .3 * along);   // taps
+        float a = smoothstep(wa, wa * .35, abs(across));
+        // haren van het penseel: fijne strepen in de lengte, droger naar de staart
+        float bristle = noise(vec2(across / W * 2.2 + h * 40., along * 1.5 + h * 7.));
+        a *= mix(1., smoothstep(.2, .65, bristle), (.25 + .35 * along) * (.5 + .5 * u_rain));
+        if (a < .01) continue;
+        // palet uit De Sterrennacht: ultramarijn, kobalt, groenblauw, bleek cyaan
+        float pick = hash(cell + 8.8);
+        vec3 pc = pick < .32 ? vec3(.13, .23, .50) : pick < .58 ? vec3(.24, .40, .68) : pick < .82 ? vec3(.18, .40, .40) : vec3(.60, .74, .80);
+        vec3 rc = mix(mix(pc, vec3(.60, .72, .86), .55), pc * (.9 + .2 * h), day); // 's nachts lichter dan de lucht
+        rc = mix(rc, Cm, .15);                                           // harmonie met de verf eronder
+        rc *= .9 + .2 * clamp(across / max(wa, 1e-4), -1., 1.);         // een licht randje aan één kant
+        c = mix(c, clamp(rc, 0., 1.), a * (.55 + .25 * u_rain) * (1. - fl2 * .25));
       }
     }
   }

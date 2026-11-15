@@ -80,8 +80,16 @@
 - [x] Testen: `?relief=0..1` (0 = uit, standaard 0,6); voor/na-beelden in `film/feature11/`
 - Een eigen upload krijgt een zwakker, korrelig reliëf (geen flow field). Op een novembermiddag (zon ~17°) blijft het reliëf goed zichtbaar; in de zomer (~61°) is het echt subtiel
 
+## 12. Regen als penseelstreken
+- [x] Korte, taps toelopende streken met penseelharen (droger naar de staart), licht gebogen
+- [x] Kleuren uit het schilderij: ultramarijn, kobalt, groenblauw en bleek cyaan, gemengd met de verf eronder; 's nachts lichter dan de lucht
+- [x] Wind bepaalt de schuinte; in de lucht buigen de streken deels mee met de streekrichting (flow field)
+- [x] Motregen fijn en schaars, regen dichter, storm een extra laag: langer, dichter en schuiner
+- [x] Natte daken en straten glanzen op de verfribbels (normal map van feature 11): overdag koel luchtlicht, 's avonds warm lamplicht bij de ramen
+- [x] Testen: `?weather=drizzle|rain|storm` (bijv. met `&time=13:00` of `&time=19:00`); voor/na-beelden in `film/feature12/`
+- Het dorp valt in 16:9 deels onder de rand; de natte glans zie je het best in een smaller venster of op `?frame` op een 4:3-scherm
+
 ## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
-- [ ] 12. Regen als penseelstreken in de kleuren van het schilderij
 - [ ] 13. Sneeuw als verfstipjes, sneeuwdek als impasto
 - [ ] 14. Mist en wolken als wervelende streken
 - [ ] 15. GitHub-backup (online versiebeheer)
