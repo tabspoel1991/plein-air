@@ -15,6 +15,9 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 - Demo: `?demo` speelt de film af (spatie = pauze, ←/→ = 2 s spoelen); `?demo&t=14&pause` = één exact frame
 - Sneltoetsen: M = masks tonen (debug), F = frame-modus; `tools/masks.html` = masks opnieuw genereren
 
+## Online
+- Backup: https://github.com/tabspoel1991/plein-air (branch `main`); na elke commit `git push`
+
 ## Film opnieuw maken
 - `render-film.bat` (eindversie, ~10-20 min) of `render-film.bat concept` (960×540, ~1 min)
 - Dat draait `tools/render_film.py`: start een eigen server op poort 8765 + Chrome zonder venster op `?demo&render=final`; de pagina stuurt elk frame als ruwe RGBA naar `server.py`, die het direct aan ffmpeg geeft (`film/_master-*.mp4`). Daarna: muziek (fade in 2 s / uit 3 s), `film/plein-air-demo-4k.mp4`, `-1080p.mp4` (2-pass, < 16 MB) en 3 stills
@@ -44,7 +47,7 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 ## Afspraken
 - Plain HTML/JS met ES modules, geen build-stap; lokaal draaien met `start.bat`
 - Eén feature per sessie; begin in plan mode
-- Na elke feature: git commit en ROADMAP.md bijwerken; video's in `film/` staan niet in git
+- Na elke feature: git commit + `git push` en ROADMAP.md bijwerken; video's in `film/` staan niet in git
 - Shaderbestanden met de Edit-tool aanpassen (PowerShell `Set-Content` zet een BOM die de shader breekt)
 - Kleuren in de shader nooit boven 1 laten komen vóór `pow()` (gaf NaN → zwarte spikkels)
 - Git staat in `C:\Program Files\Git\cmd`; pip heeft geen internet (SSL), dus beeldbewerking in de browser; ffmpeg via winget

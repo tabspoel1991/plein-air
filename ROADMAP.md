@@ -112,8 +112,13 @@
 - [x] Beelden van opvallende dagen in `film/feature16/` (sneeuwstorm 7 feb 2021, hittegolf 25 jul 2019, 40 graden 19 jul 2022, storm Eunice 18 feb 2022, watersnoodnacht 1 feb 1953)
 - Archiefweer is een modelreconstructie (ERA5, ~25 km): windpieken en mist zijn daarin zwakker dan ze echt waren
 
+## 15. GitHub-backup
+- [x] Publieke repository https://github.com/tabspoel1991/plein-air (remote `origin`, branch `main`); alle commits staan online
+- [x] Privacycheck: geen wachtwoorden of sleutels, geen bestanden > 100 MB; video's in `film/` blijven buiten git; `.claude/` (pc-paden) staat niet meer in git
+- Bewuste keuze: de auteur van de commits blijft het eigen e-mailadres (geschiedenis niet herschreven); een oude `launch.json` met de Windows-gebruikersnaam zit nog in de oudere versies
+- Na elke feature: commit en `git push`
+
 ## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
-- [ ] 15. GitHub-backup (online versiebeheer)
 - [ ] 17. Op de telefoon via GitHub Pages
 
 ## Later
