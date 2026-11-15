@@ -248,7 +248,8 @@ void main() {
   float covK = clamp(u_cloud * (.35 + .65 * cov), 0., 1.);
   float st2 = streak - .5;
   vec3 cloudDay = mix(u_skyHor, u_skyTop, .4) * (.9 + .5 * (Lm - .42)) + detail * .35;
-  cloudDay = mix(cloudDay * vec3(.80, .85, .95), mix(cloudDay, vec3(.95, .95, .96), .45), smoothstep(-.35, .35, st2));
+  vec3 cloudDark = mix(cloudDay, vec3(dot(cloudDay, LUM)), .3 + .4 * u_cloud) * vec3(.80, .83, .88);   // leigrijs, geen blauwe lucht
+  cloudDay = mix(cloudDark, mix(cloudDay, vec3(.95, .95, .96), .45), smoothstep(-.35, .35, st2));
   vec3 cloudNight = vec3(.075, .09, .135) * (.8 + Lm * .9) + detail * .25;
   cloudNight = mix(cloudNight * .72, cloudNight * 1.6 + vec3(.02, .025, .04), smoothstep(-.35, .35, st2));
   // maanlicht langs de wolkenstreken: een zilveren rand dicht bij de maan
@@ -371,7 +372,7 @@ void main() {
       float thick = sAmt * (.55 + .45 * u_snowCover);                  // dikkere sneeuw = meer reliëf
       vec2 gs = vec2(hx - h0, hy - h0) / e2 * vec2(22., 46.) * .009 * thick;
       vec2 rns = texture2D(u_relief, iuv).rg * 2. - 1.;
-      vec3 Ns = normalize(vec3(rns * .5 - gs, 1.));
+      vec3 Ns = normalize(vec3(rns * .35 - gs, 1.));
       // licht: zon overdag, maan 's nachts (zelfde richting als het strijklicht)
       vec2 lp = mix(u_reliefMoon.yz, u_reliefSun.yz, day);
       float lel = radians(mix(30., clamp(u_reliefSun.w, 12., 60.), day));
@@ -385,7 +386,7 @@ void main() {
       vec3 snowD = vec3(.93, .94, .97) * (.94 + detail * .45);
       vec3 snowC = mix(snowN, snowD, day);
       snowC = mix(snowC, snowC * vec3(1.15, .92, .78), u_golden * .5 + tw * .3);
-      float soft = mix(.75, 1.15, day) * (1. - u_fog * .6);              // bij mist vlakker licht
+      float soft = mix(.75, .85, day) * (1. - u_fog * .6);               // bij mist vlakker licht
       snowC = clamp(snowC, 0., 1.);
       snowC *= 1. + shs * .6 * soft;
       snowC = mix(snowC, snowC * vec3(.76, .84, 1.02), clamp(-shs * 1.4, 0., 1.) * soft);   // blauwe schaduwkant

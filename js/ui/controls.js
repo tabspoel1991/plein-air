@@ -1,5 +1,7 @@
 // ui/ — knoppen, sliders, frame-modus. Houdt de UI-state bij; weet niets van WebGL.
 
+import { chosenDay, dayKey, FIRST_DAY } from '../time/day.js';
+
 const $ = id => document.getElementById(id);
 const fmt = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 
@@ -10,8 +12,26 @@ export function initUI({ onFile }) {
   const tq = new URLSearchParams(location.search).get('time');
   if (tq && /^\d{1,2}:\d{2}$/.test(tq)) { const [h, m] = tq.split(':').map(Number); state.live = false; state.minutes = h * 60 + m; liveBtn.classList.remove('on'); }
 
+  // datumkiezer: een dag kiezen zet ?date= in de URL (deelbaar) en laadt opnieuw; Live = terug naar nu
+  const day = chosenDay(), dayIn = $('day'), url = new URL(location.href);
+  const today = new Date(), max = new Date(today.getTime() + 15 * 86400000);
+  dayIn.min = FIRST_DAY; dayIn.max = dayKey(max);
+  dayIn.value = day ? day.key : dayKey(today);
+  state.day = day;
+  if (day) { state.live = false; liveBtn.classList.remove('on'); if (!tq) state.minutes = today.getHours() * 60 + today.getMinutes(); }
+  const go = (key, extra) => {
+    if (key) url.searchParams.set('date', key); else url.searchParams.delete('date');
+    if (extra) { url.searchParams.set(extra, ''); url.searchParams.delete('time'); }
+    location.href = url.toString().replace(/=(?=&|$)/g, '');
+  };
+  dayIn.addEventListener('change', () => {
+    if (!dayIn.value) return;
+    if (dayIn.value === dayKey(new Date()) && !day) return;
+    go(dayIn.value);
+  });
+
   slider.addEventListener('input', () => { state.live = false; state.minutes = +slider.value; liveBtn.classList.remove('on'); });
-  liveBtn.addEventListener('click', () => { state.live = true; liveBtn.classList.add('on'); });
+  liveBtn.addEventListener('click', () => { if (day) return go(null); state.live = true; liveBtn.classList.add('on'); });
   // beweging: standaard stuurt de wind; zelf schuiven overschrijft dat
   const autoBtn = $('autoWind');
   $('motion').addEventListener('input', e => { state.motion = +e.target.value; state.autoMotion = false; autoBtn.classList.remove('on'); });
@@ -49,6 +69,7 @@ export function initUI({ onFile }) {
     } catch (e) { /* niet ondersteund */ }
   }
   function setFrame(on) {
+    if (on && day) return go(null, 'frame');   // frame-modus is altijd live
     state.frame = on;
     document.body.classList.toggle('frame', on);
     if (on) {
@@ -83,6 +104,7 @@ export function initUI({ onFile }) {
   // De datum die getekend moet worden: nu, of de tijd van de slider.
   state.targetDate = () => {
     const d = new Date();
+    if (day) d.setFullYear(day.y, day.m, day.d);
     if (!state.live) d.setHours(Math.floor(state.minutes / 60), state.minutes % 60, 0, 0);
     return d;
   };

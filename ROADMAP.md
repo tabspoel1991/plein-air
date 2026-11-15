@@ -104,9 +104,16 @@
 - [x] Testen: `?weather=cloudy` of `?weather=fog`, met `&time=13:00` of `&time=23:00&moon=.5`; voor/na-beelden in `film/feature14/`
 - In de sterkransen draait het flow field rond; daar zijn de wolkenstreken bewust zachter
 
+## 16. Datumkiezer
+- [x] Datumveld naast de tijdslider en `?date=2021-02-07`: elke dag vanaf 1940 met de echte zonnestand, maanfase en het weer in Gouda van die dag, per uur (de tijdslider loopt door de dag)
+- [x] Weer: Open-Meteo forecast-API voor ±90 dagen terug t/m 15 dagen vooruit, anders het historical archive; zelfde weerregels als live; sneeuwdek uit de gemeten sneeuwhoogte; afgelopen dagen worden onthouden (localStorage)
+- [x] Weerlabel toont dag + weer, bijv. "7 feb 2021 · Sneeuw · 28 km/u"; geen data (verre toekomst/offline) → helder met melding
+- [x] Live zet alles terug naar nu; frame-modus is altijd live (F met een datum → live lijst); de demo is ongewijzigd
+- [x] Beelden van opvallende dagen in `film/feature16/` (sneeuwstorm 7 feb 2021, hittegolf 25 jul 2019, 40 graden 19 jul 2022, storm Eunice 18 feb 2022, watersnoodnacht 1 feb 1953)
+- Archiefweer is een modelreconstructie (ERA5, ~25 km): windpieken en mist zijn daarin zwakker dan ze echt waren
+
 ## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
 - [ ] 15. GitHub-backup (online versiebeheer)
-- [ ] 16. Datumkiezer: elke dag met echte zon, maan en historisch weer van Gouda (`?date=`)
 - [ ] 17. Op de telefoon via GitHub Pages
 
 ## Later

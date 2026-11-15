@@ -12,14 +12,21 @@ import { generateRelief } from './scene/relief.js';
 import { initUI } from './ui/controls.js';
 import { createWeather, applyWeather, windToMotion } from './weather/weather.js';
 import { createWeatherState, weatherUniforms } from './weather/state.js';
+import { createDayWeather } from './weather/history.js';
+import { chosenDay, dayLabel } from './time/day.js';
 
 const params = new URLSearchParams(location.search);
 const demo = params.has('demo');
+const day = chosenDay(params);   // datumkiezer (?date=); null = live
 
-function weatherName(w) {
+function weatherName(w, source) {
   const n = w.snow > .15 ? 'Sneeuw' : w.rain > .55 ? 'Regen' : w.rain > .12 ? 'Motregen' : w.fog > .4 ? 'Mist'
-    : w.cloud > .7 ? 'Bewolkt' : w.cloud > .35 ? 'Half bewolkt' : 'Helder';
-  return n + ' · ' + Math.round(w.windKmh) + ' km/u';
+    : w.cloud > .7 ? 'Bewolkt' : w.cloud > .35 ? 'Half bewolkt' : w.snowCover > .2 ? 'Sneeuwdek' : 'Helder';
+  const txt = n + ' · ' + Math.round(w.windKmh) + ' km/u';
+  if (!day) return txt;
+  // gekozen dag: laat zien welke dag en welk weer er actief is
+  const d = dayLabel(day) + ' · ';
+  return source.status === 'laden' ? d + 'weer laden…' : source.status === 'geen' ? d + 'geen weer bekend (helder)' : d + txt;
 }
 
 const ui = initUI({
@@ -60,7 +67,9 @@ async function start() {
 
   const motion = createMotion(), quality = createQuality();
   const forced = params.get('weather');
-  const weather = createWeather({ force: forced }), wstate = createWeatherState({ fast: !!forced, cover: params.has('cover') ? +params.get('cover') : null });
+  // weer: geforceerd (?weather=), van een gekozen dag (?date=), of live
+  const weather = day && !forced ? createDayWeather(day) : createWeather({ force: forced });
+  const wstate = createWeatherState({ fast: !!forced || !!day, persist: !day, cover: params.has('cover') ? +params.get('cover') : null });
   let profile = null, last = performance.now();
   const t0 = last;
   function frame(now) {
@@ -70,10 +79,11 @@ async function start() {
     quality.setMax(ui.frame ? Math.min(1, 1.25 / dpr) : 1);
     const res = renderer.resize(quality.update(rawDt));
     const date = ui.targetDate(), sun = sunPosition(date);
+    if (weather.update) weather.update(date);
     const w = wstate.update(weather.target, dt, weather.takeSnap());
     profile = easeProfile(profile, applyWeather(lightProfile(sun), w), dt);
     ui.showTime(date, phaseName(sun));
-    ui.showWeather(weatherName(w));
+    ui.showWeather(weatherName(w, weather));
     const motionValue = ui.autoMotion ? windToMotion(w.windKmh) : ui.motion;
     ui.showMotion(motionValue);
     const uniforms = {

@@ -52,6 +52,8 @@ button.on { border-color: var(--accent); color: var(--accent); }
 .drop div { border: 2px dashed var(--accent); border-radius: 22px; padding: 46px 64px; font-family: Fraunces, serif; font-size: 24px; }
 .err { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 30px; font-size: 15px; color: var(--dim); }
 .clock.wx { min-width: 84px; }
+input[type=date] { font: 500 13px Inter, sans-serif; color: var(--txt); background: rgba(255,255,255,.08); border: 1px solid var(--line);
+  border-radius: 8px; padding: 5px 8px; color-scheme: dark; }
 
 /* demo: alleen de compositor (beeld + bijschriften), geen knoppen */
 body.demo .bar, body.demo .title, body.demo .legend { display: none !important; }
