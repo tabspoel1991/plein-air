@@ -18,6 +18,7 @@ import { chosenDay, dayLabel } from './time/day.js';
 const params = new URLSearchParams(location.search);
 const demo = params.has('demo');
 const day = chosenDay(params);   // datumkiezer (?date=); null = live
+const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 900;
 
 function weatherName(w, source) {
   const n = w.snow > .15 ? 'Sneeuw' : w.rain > .55 ? 'Regen' : w.rain > .12 ? 'Motregen' : w.fog > .4 ? 'Mist'
@@ -74,9 +75,10 @@ async function start() {
   const t0 = last;
   function frame(now) {
     const rawDt = (now - last) / 1000, dt = Math.min(.25, rawDt); last = now;
-    // frame-modus: hooguit ~1.25 beeldpunten per css-pixel (scheelt veel op tablets met een scherp scherm)
+    // frame-modus: hooguit ~1.25 beeldpunten per css-pixel (scheelt veel op tablets met een scherp scherm);
+    // telefoons/tablets (touch, klein scherm) hooguit ~1.5, voor de prestaties en de batterij
     const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    quality.setMax(ui.frame ? Math.min(1, 1.25 / dpr) : 1);
+    quality.setMax(ui.frame ? Math.min(1, 1.25 / dpr) : PHONE ? Math.min(1, 1.5 / dpr) : 1);
     const res = renderer.resize(quality.update(rawDt));
     const date = ui.targetDate(), sun = sunPosition(date);
     if (weather.update) weather.update(date);
@@ -88,6 +90,8 @@ async function start() {
     ui.showMotion(motionValue);
     const uniforms = {
       u_res: res, u_img: imgSize, u_t: (now - t0) / 1000,
+      // portret (telefoon): uitsnede iets naar links, zodat cipres en de grote wervel in beeld zijn
+      u_panX: scene.source === 'masks' && res[0] < res[1] ? -.42 : 0,
       ...motion.update(motionValue, dt),
       ...relightUniforms(profile, scene, params.has('moon') ? +params.get('moon') : moonPhase(date).phase),
       ...weatherUniforms(w),

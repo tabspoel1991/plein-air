@@ -1,6 +1,6 @@
 :root { --glass: rgba(18,16,14,.55); --line: rgba(255,255,255,.14); --txt: #f3eee6; --dim: rgba(243,238,230,.6); --accent: #e9b872; }
 * { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: #0b0a09; overflow: hidden; color: var(--txt); font-family: Inter, system-ui, sans-serif; }
+html, body { height: 100%; background: #0b0a09; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; -webkit-tap-highlight-color: transparent; color: var(--txt); font-family: Inter, system-ui, sans-serif; }
 canvas#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
 body.idle { cursor: none; }
 body.frame, body.frame * { cursor: none !important; }
@@ -60,3 +60,31 @@ body.demo .bar, body.demo .title, body.demo .legend { display: none !important; 
 body.demo canvas#gl { visibility: hidden; }
 canvas#comp { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 body.demo { cursor: none; }
+
+/* telefoon: compacte balk onderaan over de volle breedte (portret en landschap) */
+@media (max-width: 700px), (max-height: 500px) {
+  .bar { left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); transform: none; max-width: none;
+    gap: 8px 12px; padding: 10px 12px; border-radius: 14px; justify-content: space-between; }
+  body.idle .bar { transform: translateY(10px); }
+  .sep, #pick, #fs { display: none; }
+  .clock { min-width: 64px; }
+  .clock .t { font-size: 20px; }
+  .clock .ph { font-size: 11px; }
+  .group { gap: 4px; flex: 1 1 140px; }
+  .group label { font-size: 10px; }
+  input[type=range], input[type=range].small { width: 100%; height: 6px; }
+  input[type=range]::-webkit-slider-thumb { width: 22px; height: 22px; }
+  button { padding: 9px 11px; font-size: 12px; min-height: 38px; }
+  .clock.wx { min-width: 0; flex: 1 1 100%; order: 10; }
+  .clock.wx .ph { margin-top: 0; }
+  .title { top: max(14px, env(safe-area-inset-top)); left: 16px; }
+  .title h1 { font-size: 17px; }
+  .title p { font-size: 11px; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  .bar { left: 50%; right: auto; width: min(760px, calc(100vw - 16px)); transform: translateX(-50%); padding: 8px 12px; }
+  body.idle .bar { transform: translateX(-50%) translateY(10px); }
+  .group { flex: 1 1 120px; }
+  .clock.wx { flex: 0 1 auto; order: 0; }
+  .title { display: none; }
+}

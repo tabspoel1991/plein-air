@@ -1,0 +1,16 @@
+{
+  "name": "Plein Air · De Sterrennacht",
+  "short_name": "Plein Air",
+  "description": "De Sterrennacht leeft: het licht volgt de echte tijd, het weer en de maan in Gouda.",
+  "lang": "nl",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "any",
+  "background_color": "#0b0a09",
+  "theme_color": "#0b0a09",
+  "icons": [
+    { "src": "assets/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "assets/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

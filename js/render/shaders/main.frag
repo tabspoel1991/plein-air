@@ -39,6 +39,7 @@ uniform vec4 u_reliefSun, u_reliefMoon;
 
 // demo: 0 = gewoon. u_still 1 = de onbewerkte museumprint; u_contain 1 = het hele doek in beeld (op donker);
 // u_pan = verschuiving omhoog/omlaag; u_wake = beweging alleen binnen straal z rond (x, y) (z <= 0: overal)
+uniform float u_panX;                                  // horizontale uitsnede (telefoon in portret)
 uniform float u_still, u_contain, u_pan, u_moonOrig;   // u_moonOrig 1 = de originele sikkel houden
 uniform vec3 u_wake;
 
@@ -52,7 +53,7 @@ vec2 cover(vec2 uv) { float rs = u_res.x / u_res.y, ri = u_img.x / u_img.y;
   vec2 s = rs > ri ? vec2(1., ri / rs) : vec2(rs / ri, 1.);
   vec2 sc = rs > ri ? vec2(rs / ri, 1.) : vec2(1., ri / rs);   // contain: het hele doek
   s = mix(s, sc, u_contain);
-  return (uv - .5) * s + .5 + vec2(0., u_pan); }
+  return (uv - .5) * s + .5 + vec2(u_panX * (1. - s.x) * .5, u_pan); }   // u_panX: -1 = linkerrand, 1 = rechterrand
 
 // WEATHER: wolken en mist als wervelende streken. Ruis wordt langs het flow field uitgesmeerd
 // (8 stappen langs de streekrichting), zodat ze dezelfde wervels volgen als Van Goghs lucht;
