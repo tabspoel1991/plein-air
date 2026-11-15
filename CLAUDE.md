@@ -16,7 +16,9 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 - Sneltoetsen: M = masks tonen (debug), F = frame-modus; `tools/masks.html` = masks opnieuw genereren
 
 ## Online
+- **Op de telefoon (GitHub Pages): https://tabspoel1991.github.io/plein-air/** (toont wat op `main` staat, ~1 min na een push)
 - Backup: https://github.com/tabspoel1991/plein-air (branch `main`); na elke commit `git push`
+- Zonder `server.py` werkt alles behalve masks opslaan (`tools/masks.html`) en de film renderen; die blijven op de pc
 
 ## Film opnieuw maken
 - `render-film.bat` (eindversie, ~10-20 min) of `render-film.bat concept` (960×540, ~1 min)
@@ -40,6 +42,7 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 - `js/render/`: `renderer.js` (WebGL1, meerdere programs, render targets, vaste resolutie voor de film), `quality.js` (adaptieve resolutie), `shaders/main.frag` (MOTION → maanfase → RELIGHT met wervelende wolken (`swirl`: ruis langs het flow field) → RELIEF strijklicht → WEATHER land: natte glans, impasto-sneeuwdek, mistbanen → ramen/zon/sterren → WEATHER neerslag: regen als penseelstreken, sneeuw als verfstipjes → demo-print/museumwand → debug), `shaders/room.frag` (de demokamer: tv-frame, lamp, raam met Goudse grachtenpanden en sneeuw)
 - `js/demo/`: `timeline.js` storyboard als pure functie `state(t)` (deterministisch) · `demo.js` eigen klok, kamer-pass, frame-voor-frame renderen · `captions.js` compositor (beeld + zwart + bijschriften + titel op een 2D-canvas)
 - `js/ui/controls.js`: knoppen, sliders, Auto (wind), weerlabel, sneltoetsen, URL-opties, frame-modus
+- `manifest.webmanifest` + `assets/icons/`: beginscherm-icoon (telefoon); `.nojekyll` voor GitHub Pages
 - `assets/`: `masks/` (grijswaarde-PNG per element, `flow.png`, `scene.json`), `fonts/` (Cormorant Garamond, OFL), `music/` (Gymnopédie No. 1, publiek domein) — bronnen in `CREDITS.md`
 - `server.py`: statische server zonder cache; PUT voor `assets/masks/`; `/render/start|frame|end|status` voor de film
 - `tools/masks.html`, `tools/render_film.py`; `prototype.html`: oud prototype, alleen als referentie

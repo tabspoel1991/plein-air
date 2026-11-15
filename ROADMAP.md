@@ -118,8 +118,14 @@
 - Bewuste keuze: de auteur van de commits blijft het eigen e-mailadres (geschiedenis niet herschreven); een oude `launch.json` met de Windows-gebruikersnaam zit nog in de oudere versies
 - Na elke feature: commit en `git push`
 
-## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
-- [ ] 17. Op de telefoon via GitHub Pages
+## 17. Op de telefoon (GitHub Pages)
+- [x] Live op **https://tabspoel1991.github.io/plein-air/**, zonder pc en zonder `server.py` (alle paden relatief, `.nojekyll`)
+- [x] Telefoon: compacte knoppenbalk over de volle breedte met grotere aanraakvlakken; in portret schuift de uitsnede naar links (cipres, grote wervel, dorp); geen dubbeltik-zoom of pull-to-refresh
+- [x] Prestaties: op touchscreens hooguit ~1,5 beeldpunt per css-pixel, plus de bestaande adaptieve resolutie
+- [x] "Toevoegen aan beginscherm": web app manifest + iconen (de maan uit het schilderij), opent schermvullend
+- [x] Gecontroleerd op de live site: desktop, portret (met `?date=`) en landschap; beelden in `film/feature17/`
+- Nog niet op een echte telefoon getest; headless Chrome kan niet smaller dan ~500 px
+
 
 ## Later
 - Seizoenen
