@@ -127,6 +127,14 @@
 - Nog niet op een echte telefoon getest; headless Chrome kan niet smaller dan ~500 px
 
 
+## 17b. Telefoon als afstandsbediening voor een tv
+- [x] Tv-modus `?tv`: de tv opent de site in zijn eigen browser (één keer, daarna bladwijzer) en toont een koppelcode van 6 tekens
+- [x] Telefoon: knop **Bedien tv** → code → dezelfde knoppen (tijd, dag, Live, beweging, Auto) sturen de tv; de telefoon toont zelf hetzelfde beeld; de koppeling wordt onthouden; op "📺 Tv · CODE" tikken = ontkoppelen
+- [x] Geen eigen server nodig: de knopstand gaat via ntfy.sh (gratis openbare berichtendienst); de tv haalt bij herstart de laatste stand op; de telefoon mag daarna uit
+- [x] Een dag kiezen wisselt nu zonder herladen (ook op de pc); frame-modus op de pc blijft altijd live
+- [x] Getest met twee tabbladen via de echte ntfy.sh (tijd, dag, beweging, Live, herstart tv, opnieuw koppelen)
+- Echt "casten" van een webpagina kan vanaf een iPhone niet (alleen AirPlay-schermdeling); nog niet getest op de echte Samsung Frame. Wie de code raadt, kan alleen de tijd/dag van het schilderij veranderen
+
 ## Later
 - Seizoenen
 - Andere schilderijen
