@@ -46,6 +46,7 @@
   </div>
   <button id="autoWind" class="on" title="De wind in Gouda stuurt de beweging">Auto (wind)</button>
   <div class="clock wx"><span class="ph" id="wx">&nbsp;</span></div>
+  <button id="tvBtn" title="Bedien een tv waarop Plein Air openstaat (adres + ?tv)">Bedien tv</button>
   <button id="fs">Volledig scherm</button>
   <button id="frameBtn" title="Lijst-modus: alleen het schilderij (toets F)">Lijst</button>
 </div>
@@ -59,6 +60,16 @@
   <span><i style="background:#ff3333"></i>dorp</span>
   <span><i style="background:#ff00ff"></i>ramen</span>
   <span><i style="background:#8c5926"></i>heuvels</span>
+</div>
+
+<!-- tv-modus (?tv): koppelcode voor de telefoon -->
+<div class="tvpair" id="tvPair">
+  <div class="tvbox">
+    <h2>Plein Air</h2>
+    <p>Open op je telefoon <b id="tvUrl"></b> en tik op <b>Bedien tv</b></p>
+    <div class="code" id="tvCode"></div>
+    <small>Koppelcode van deze tv</small>
+  </div>
 </div>
 
 <div class="drop" id="drop"><div>Laat je schilderij hier los</div></div>

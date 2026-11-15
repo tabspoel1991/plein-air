@@ -61,6 +61,22 @@ body.demo canvas#gl { visibility: hidden; }
 canvas#comp { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: contain; background: #000; }
 body.demo { cursor: none; }
 
+/* tv-modus: koppelscherm (groot tot er een telefoon verbindt, daarna even in de hoek) */
+.tvpair { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; z-index: 4; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(8,8,12,.55), rgba(8,8,12,.15) 70%); transition: opacity .6s; }
+body.tv-pairing .tvpair { display: flex; }
+.tvbox { text-align: center; padding: 4vh 5vw; background: var(--glass); border: 1px solid var(--line); border-radius: 2.4vh;
+  backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.tvbox h2 { font: 600 4.4vh Fraunces, serif; }
+.tvbox p { font-size: 2.4vh; color: var(--dim); margin-top: 1.4vh; }
+.tvbox p b { color: var(--txt); font-weight: 500; }
+.tvbox .code { font: 600 12vh Fraunces, serif; letter-spacing: 1.6vh; color: var(--accent); margin: 2vh 0 .6vh; font-variant-numeric: tabular-nums; }
+.tvbox small { font-size: 1.8vh; color: var(--dim); }
+body.tv-corner .tvpair { display: flex; align-items: flex-end; justify-content: flex-end; padding: 3vh; background: none; }
+body.tv-corner .tvbox { padding: 1.4vh 2vw; }
+body.tv-corner .tvbox h2, body.tv-corner .tvbox p { display: none; }
+body.tv-corner .tvbox .code { font-size: 4vh; letter-spacing: .5vh; margin: 0; }
+
 /* telefoon: compacte balk onderaan over de volle breedte (portret en landschap) */
 @media (max-width: 700px), (max-height: 500px) {
   .bar { left: 8px; right: 8px; bottom: max(8px, env(safe-area-inset-bottom)); transform: none; max-width: none;

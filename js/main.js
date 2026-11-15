@@ -13,26 +13,49 @@ import { initUI } from './ui/controls.js';
 import { createWeather, applyWeather, windToMotion } from './weather/weather.js';
 import { createWeatherState, weatherUniforms } from './weather/state.js';
 import { createDayWeather } from './weather/history.js';
-import { chosenDay, dayLabel } from './time/day.js';
+import { dayLabel } from './time/day.js';
+import { tvCode, phoneCode, setPhoneCode, cleanCode, latest, listen, sender } from './remote/link.js';
 
 const params = new URLSearchParams(location.search);
 const demo = params.has('demo');
-const day = chosenDay(params);   // datumkiezer (?date=); null = live
 const PHONE = matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 900;
 
 function weatherName(w, source) {
   const n = w.snow > .15 ? 'Sneeuw' : w.rain > .55 ? 'Regen' : w.rain > .12 ? 'Motregen' : w.fog > .4 ? 'Mist'
     : w.cloud > .7 ? 'Bewolkt' : w.cloud > .35 ? 'Half bewolkt' : w.snowCover > .2 ? 'Sneeuwdek' : 'Helder';
   const txt = n + ' · ' + Math.round(w.windKmh) + ' km/u';
-  if (!day) return txt;
+  if (!ui.day) return txt;
   // gekozen dag: laat zien welke dag en welk weer er actief is
-  const d = dayLabel(day) + ' · ';
+  const d = dayLabel(ui.day) + ' · ';
   return source.status === 'laden' ? d + 'weer laden…' : source.status === 'geen' ? d + 'geen weer bekend (helder)' : d + txt;
 }
 
+// afstandsbediening (js/remote/): de telefoon stuurt elke knopwijziging naar de gekoppelde tv
+let send = null;
 const ui = initUI({
   onFile: f => loadImageFile(f).then(img => setPainting(img, f.name.replace(/\.[^.]+$/, ''), genericScene())).catch(console.error),
+  onDay: d => setDay && setDay(d),
+  onChange: s => send && send(s),
+  onRemote: async () => {
+    if (send) {
+      if (!confirm('Ontkoppelen van tv ' + phoneCode() + '?')) return;
+      send = null; setPhoneCode(null); ui.showRemote(null); return;
+    }
+    const code = cleanCode(prompt('Koppelcode die op de tv staat (6 tekens):') || '');
+    if (code.length !== 6) return;
+    setPhoneCode(code);
+    await connectPhone(code);
+  },
 });
+let setDay = null;
+
+// telefoon: koppelen = eerst de stand van de tv overnemen, daarna zelf de baas
+async function connectPhone(code) {
+  ui.applyState(await latest(code));
+  send = sender(code);
+  ui.showRemote(code);
+  send(ui.getState());
+}
 
 let renderer, scene, imgSize = [16, 9], srcLuma = .45;
 
@@ -69,8 +92,24 @@ async function start() {
   const motion = createMotion(), quality = createQuality();
   const forced = params.get('weather');
   // weer: geforceerd (?weather=), van een gekozen dag (?date=), of live
-  const weather = day && !forced ? createDayWeather(day) : createWeather({ force: forced });
-  const wstate = createWeatherState({ fast: !!forced || !!day, persist: !day, cover: params.has('cover') ? +params.get('cover') : null });
+  // een andere dag kiezen wisselt de weerbron (zonder herladen); het live weer wordt maar één keer gemaakt
+  let weather, wstate, liveWeather = null;
+  const dayWeather = new Map();
+  setDay = d => {
+    if (d && !forced) { if (!dayWeather.has(d.key)) dayWeather.set(d.key, createDayWeather(d)); weather = dayWeather.get(d.key); }
+    else weather = liveWeather || (liveWeather = createWeather({ force: forced }));
+    wstate = createWeatherState({ fast: !!forced || !!d, persist: !d, cover: params.has('cover') ? +params.get('cover') : null });
+    weather.snap = true;
+  };
+  setDay(ui.day);
+
+  // tv (?tv): koppelcode tonen, de laatste stand ophalen en de telefoon volgen
+  if (ui.tv) {
+    const code = tvCode(params.get('tv'));
+    ui.showTvCode(code);
+    latest(code).then(s => { if (s) { ui.applyState(s); ui.tvConnected(); } });
+    listen(code, s => { ui.applyState(s); ui.tvConnected(); });
+  } else if (phoneCode()) connectPhone(phoneCode());
   let profile = null, last = performance.now();
   const t0 = last;
   function frame(now) {

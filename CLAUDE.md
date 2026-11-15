@@ -11,13 +11,14 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 
 ## Starten
 - Dubbelklik `start.bat` → start `server.py` (Python, alleen standaardbibliotheek) en opent http://localhost:8000
-- URL-opties: `?frame` = lijst-modus · `?weather=clear|cloudy|drizzle|rain|storm|snow|fog` = weer forceren · `?time=13:00` = vaste tijd · `?date=2021-02-07` = een dag kiezen (echte zon, maan en weer van Gouda die dag, vanaf 1940; ook via het datumveld; Live = terug naar nu; niet in frame-modus of demo) · `?moon=0..1` = maanfase (0 nieuw, .5 vol) · `?cover=0.7` = sneeuwdek · `?relief=0..1` = verfreliëf (0 uit, standaard 0,6) · `?clean` = zonder knoppen
+- URL-opties: `?frame` = lijst-modus · `?weather=clear|cloudy|drizzle|rain|storm|snow|fog` = weer forceren · `?time=13:00` = vaste tijd · `?date=2021-02-07` = een dag kiezen (echte zon, maan en weer van Gouda die dag, vanaf 1940; ook via het datumveld; Live = terug naar nu; niet in frame-modus of demo) · `?moon=0..1` = maanfase (0 nieuw, .5 vol) · `?cover=0.7` = sneeuwdek · `?relief=0..1` = verfreliëf (0 uit, standaard 0,6) · `?clean` = zonder knoppen · `?tv` = tv-modus (lijst die de telefoon volgt; toont een koppelcode, `?tv=CODE` = vaste code)
 - Demo: `?demo` speelt de film af (spatie = pauze, ←/→ = 2 s spoelen); `?demo&t=14&pause` = één exact frame
 - Sneltoetsen: M = masks tonen (debug), F = frame-modus; `tools/masks.html` = masks opnieuw genereren
 
 ## Online
 - **Op de telefoon (GitHub Pages): https://tabspoel1991.github.io/plein-air/** (toont wat op `main` staat, ~1 min na een push)
 - Backup: https://github.com/tabspoel1991/plein-air (branch `main`); na elke commit `git push`
+- Tv: open in de browser van de tv `https://tabspoel1991.github.io/plein-air/?tv` (bladwijzer), op de telefoon dezelfde site → **Bedien tv** → code
 - Zonder `server.py` werkt alles behalve masks opslaan (`tools/masks.html`) en de film renderen; die blijven op de pc
 
 ## Film opnieuw maken
@@ -41,6 +42,7 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 - `js/relight/relight.js`: profiel → shader-uniforms (incl. maanschijf + fase, strijklicht van zon/maan × `?relief`); de kleurregels staan in de shader
 - `js/render/`: `renderer.js` (WebGL1, meerdere programs, render targets, vaste resolutie voor de film), `quality.js` (adaptieve resolutie), `shaders/main.frag` (MOTION → maanfase → RELIGHT met wervelende wolken (`swirl`: ruis langs het flow field) → RELIEF strijklicht → WEATHER land: natte glans, impasto-sneeuwdek, mistbanen → ramen/zon/sterren → WEATHER neerslag: regen als penseelstreken, sneeuw als verfstipjes → demo-print/museumwand → debug), `shaders/room.frag` (de demokamer: tv-frame, lamp, raam met Goudse grachtenpanden en sneeuw)
 - `js/demo/`: `timeline.js` storyboard als pure functie `state(t)` (deterministisch) · `demo.js` eigen klok, kamer-pass, frame-voor-frame renderen · `captions.js` compositor (beeld + zwart + bijschriften + titel op een 2D-canvas)
+- `js/remote/link.js`: telefoon als afstandsbediening voor een tv. Koppelcode van 6 tekens; de knopstand `{live, minutes, date, motion, autoMotion}` gaat via ntfy.sh (gratis openbare berichtendienst, geen account; topic `pleinair-<code>`); de tv luistert (EventSource) en haalt bij het opstarten de laatste stand op
 - `js/ui/controls.js`: knoppen, sliders, Auto (wind), weerlabel, sneltoetsen, URL-opties, frame-modus
 - `manifest.webmanifest` + `assets/icons/`: beginscherm-icoon (telefoon); `.nojekyll` voor GitHub Pages
 - `assets/`: `masks/` (grijswaarde-PNG per element, `flow.png`, `scene.json`), `fonts/` (Cormorant Garamond, OFL), `music/` (Gymnopédie No. 1, publiek domein) — bronnen in `CREDITS.md`
