@@ -6,3 +6,6 @@ Thumbs.db
 # film: tussenbestanden (masters)
 film/_master-*.mp4
 film/*.mp4
+
+# lokale instellingen van Claude Code (bevat paden van deze pc)
+.claude/
