@@ -314,21 +314,51 @@ void main() {
     c = clamp(c, 0., 1.);
   }
 
-  // sneeuwdek: eerst op de bovenranden van daken en heuvels, daarna steeds meer
+  // sneeuwdek als impasto: eerst op de bovenranden van daken, heuvels en cipres, daarna steeds meer.
+  // De sneeuw ligt er als dikke, met het mes gestreken klodders verf: eigen hoogte → eigen normal,
+  // samen met het verfreliëf belicht vanuit de zon (overdag) of de maan ('s nachts).
   if (u_snowCover > .001) {
     float vilUp = texture2D(u_maskB, iuv - vec2(0., .012)).r;
     float hilUp = texture2D(u_maskB, iuv - vec2(0., .02)).b;
     float cypUp = texture2D(u_maskA, iuv - vec2(0., .01)).a;
     float topV = vil * (1. - vilUp), topH = hil * (1. - hilUp), topC = cyp * (1. - cypUp);
-    float base = hil * .55 + vil * .22 + cyp * .06 + topV * 1.1 + topH * .5 + topC * .35 + litK * .15 * land;
+    float base = hil * .55 + vil * .22 + cyp * (.1 + .22 * litK) + topV * 1.1 + topH * .5 + topC * .55 + litK * .15 * land;
     float sn = noise(iuv * vec2(70., 110.)) * .55 + noise(iuv * vec2(15., 24.)) * .45;
     float sAmt = smoothstep(.36, .58, base * u_snowCover * 1.6 + sn * .5 - .25) * land * (1. - win);
-    vec3 snowN = vec3(.52, .59, .80) * (.64 + L * .8) + detail * .8;   // maanlicht op sneeuw
-    vec3 snowD = vec3(.92, .94, .98) * (.9 + detail * 1.2);
-    vec3 snowC = mix(snowN, snowD, day);
-    snowC = mix(snowC, snowC * vec3(1.15, .92, .78), u_golden * .5 + tw * .3);
-    snowC += vec3(1., .68, .34) * winGlow * u_lamps * .5;
-    c = mix(c, snowC, sAmt * (.62 + .26 * sn));
+    if (sAmt > .002) {
+      // hoogte van de klodders: breed en licht schuin gestreken, met korrel; gradiënt in drie monsters
+      vec2 sq = iuv * vec2(aspect, 1.);
+      vec2 sa = vec2(sq.x * 22. + sq.y * 7., sq.y * 46.);
+      float e2 = .3;
+      float h0 = noise(sa) * .65 + noise(sa * 2.3 + 7.1) * .35;
+      float hx = noise(sa + vec2(e2, 0.)) * .65 + noise((sa + vec2(e2, 0.)) * 2.3 + 7.1) * .35;
+      float hy = noise(sa + vec2(0., e2)) * .65 + noise((sa + vec2(0., e2)) * 2.3 + 7.1) * .35;
+      float thick = sAmt * (.55 + .45 * u_snowCover);                  // dikkere sneeuw = meer reliëf
+      vec2 gs = vec2(hx - h0, hy - h0) / e2 * vec2(22., 46.) * .009 * thick;
+      vec2 rns = texture2D(u_relief, iuv).rg * 2. - 1.;
+      vec3 Ns = normalize(vec3(rns * .5 - gs, 1.));
+      // licht: zon overdag, maan 's nachts (zelfde richting als het strijklicht)
+      vec2 lp = mix(u_reliefMoon.yz, u_reliefSun.yz, day);
+      float lel = radians(mix(30., clamp(u_reliefSun.w, 12., 60.), day));
+      vec2 ld = (lp - iuv) * vec2(aspect, 1.); ld = ld / (length(ld) + 1e-4);
+      vec3 Ls2 = normalize(vec3(ld * cos(lel), sin(lel)));
+      float shs = clamp(dot(Ns, Ls2) - Ls2.z, -.6, .6);
+      float spec2 = pow(clamp(dot(reflect(-Ls2, Ns), vec3(0., 0., 1.)), 0., 1.), 30.);
+      float illum = .5 - .5 * cos(6.2832 * u_moonPhase);
+      // kleur: overdag wit met blauwe schaduwkant, 's nachts koel maanlicht (sterker bij volle maan)
+      vec3 snowN = vec3(.50, .58, .82) * (.58 + L * .55 + illum * .3) + detail * .6;
+      vec3 snowD = vec3(.93, .94, .97) * (.94 + detail * .45);
+      vec3 snowC = mix(snowN, snowD, day);
+      snowC = mix(snowC, snowC * vec3(1.15, .92, .78), u_golden * .5 + tw * .3);
+      float soft = mix(.75, 1.15, day) * (1. - u_fog * .6);              // bij mist vlakker licht
+      snowC = clamp(snowC, 0., 1.);
+      snowC *= 1. + shs * .6 * soft;
+      snowC = mix(snowC, snowC * vec3(.76, .84, 1.02), clamp(-shs * 1.4, 0., 1.) * soft);   // blauwe schaduwkant
+      snowC += mix(vec3(.55, .65, .95) * illum * .5, vec3(1., .98, .92), day) * spec2 * .25 * soft;
+      // warm lamplicht rond de ramen, vooral op de kant die naar het licht kijkt
+      snowC += vec3(1., .66, .32) * min(winGlow * 1.5, 1.) * u_lamps * (.45 + max(shs, 0.) * 1.2);
+      c = mix(c, clamp(snowC, 0., 1.), sAmt * (.72 + .28 * h0));
+    }
   }
 
   // mist: dorp en heuvels verzachten (streken vervagen) en lossen op naar de horizon
@@ -438,7 +468,8 @@ void main() {
       }
     }
   }
-  // sneeuw: dwarrelende vlokken in drie lagen (dichtbij groter en sneller)
+  // sneeuw: verfstipjes, alsof ze met de penseelpunt zijn gezet (korte ovale toets met eigen hoek en
+  // penseelharen), wit, lichtblauw of af en toe een vleugje oker; drie lagen (dichtbij groter en sneller)
   if (u_snow > .001) {
     for (int l = 0; l < 3; l++) {
       float fl3 = float(l), sc = 1. + fl3 * .8;
@@ -448,18 +479,30 @@ void main() {
       vec2 g = S / (.055 / sc), cell = floor(g), f = fract(g) - .5;
       float h = hash(cell + fl3 * 31.);
       if (h < .12 + .5 * u_snow) {
-        vec2 o = (vec2(hash(cell + 1.3), hash(cell + 2.9)) - .5) * .5;
-        o.x += sin(u_wt * (.6 + h) + h * 20.) * .12;
+        vec2 o = (vec2(hash(cell + 1.3), hash(cell + 2.9)) - .5) * .44;
+        o.x += sin(u_wt * (.6 + h) + h * 20.) * .1;
         vec2 d = f - o;
-        float r = (.075 + .06 * hash(cell + 4.4)) * (1. - fl3 * .12);
-        float irr = noise(d * 14. + cell * 1.7) * .4;
-        float dl = length(d * vec2(1., 1.2)) * (1. + irr);
-        float a = smoothstep(r, r * .35, dl);
-        // overdag een zacht blauwgrijs randje, zodat witte vlokken ook tegen een lichte lucht leesbaar zijn
-        float rim = smoothstep(r * 1.5, r * .9, dl) - a;
-        c = mix(c, c * vec3(.72, .76, .86), max(rim, 0.) * .55 * day * min(1., u_snow * 2.) * (1. - fl3 * .25));
-        vec3 fc = mix(vec3(.70, .76, .90), vec3(.97, .97, 1.), day) * (.85 + .2 * h) + vec3(1., .7, .4) * u_lamps * .06;
-        c = mix(c, fc, a * (.8 - fl3 * .18) * min(1., u_snow * 2.));
+        // eigen hoek (licht met de wind mee) en een trage tuimeling
+        float ang = (hash(cell + 5.5) - .5) * 2.2 + u_wind * .4 + sin(u_wt * (.3 + h * .5) + h * 9.) * .25;
+        vec2 dr = vec2(cos(ang) * d.x + sin(ang) * d.y, -sin(ang) * d.x + cos(ang) * d.y);
+        float r = (.10 + .07 * hash(cell + 4.4)) * (1. - fl3 * .12);
+        float irr = (noise(dr * 16. + cell * 1.7) - .5) * .35;
+        float dl = length(dr * vec2(.62, 1.25)) + irr * r;               // ovaal, rafelige rand
+        float a = smoothstep(r, r * .45, dl);
+        if (a < .01) continue;
+        // penseelharen in de lengte van de toets, en een dikke (lichte) en dunne (schaduw)kant
+        float br = noise(vec2(dr.y / r * 3.5 + h * 30., dr.x / r * .8));
+        a *= .72 + .28 * smoothstep(.25, .7, br);
+        float side = clamp(dr.y / r, -1., 1.);
+        float pick = hash(cell + 9.1);
+        vec3 pc = pick < .64 ? vec3(.97, .97, .99) : pick < .94 ? vec3(.76, .85, .96) : vec3(.95, .88, .70);
+        vec3 fc = mix(pc * vec3(.70, .77, .94) * .95, pc, day);            // 's nachts koel maanlicht
+        fc += vec3(1., .68, .36) * u_lamps * .07;
+        fc *= .9 + .14 * side;
+        // overdag een zacht blauwgrijs randje, zodat witte stipjes ook tegen een lichte lucht leesbaar zijn
+        float rim = smoothstep(r * 1.35, r * .95, dl) - a;
+        c = mix(c, c * vec3(.72, .76, .86), max(rim, 0.) * .5 * day * min(1., u_snow * 2.) * (1. - fl3 * .25));
+        c = mix(c, clamp(fc, 0., 1.), a * (.85 - fl3 * .18) * min(1., u_snow * 2.));
       }
     }
   }

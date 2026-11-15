@@ -89,8 +89,14 @@
 - [x] Testen: `?weather=drizzle|rain|storm` (bijv. met `&time=13:00` of `&time=19:00`); voor/na-beelden in `film/feature12/`
 - Het dorp valt in 16:9 deels onder de rand; de natte glans zie je het best in een smaller venster of op `?frame` op een 4:3-scherm
 
+## 13. Sneeuw als verfstipjes + impasto-sneeuwdek
+- [x] Vlokken zijn verfstipjes: korte ovale toetsen met een eigen hoek, penseelharen en een lichte/donkere kant; wit, lichtblauw en af en toe een vleugje oker; ze tuimelen traag
+- [x] Sneeuwdek als dikke impasto: eigen "dikte" van gestreken klodders, met een eigen normal die samen met het verfreliëf (feature 11) wordt belicht vanuit de zon of de maan; dikkere sneeuw (`?cover=`) = meer reliëf
+- [x] 's Nachts koel blauw maanlicht (sterker bij volle maan), warm lamplicht rond de ramen; overdag wit met een blauwe schaduwkant
+- [x] Ook meer sneeuw op de lichte kant van de cipres
+- [x] Testen: `?weather=snow&cover=0.7` met `&time=13:00`, `&time=16:15` of `&time=23:00&moon=.5`; voor/na-beelden in `film/feature13/`
+
 ## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
-- [ ] 13. Sneeuw als verfstipjes, sneeuwdek als impasto
 - [ ] 14. Mist en wolken als wervelende streken
 - [ ] 15. GitHub-backup (online versiebeheer)
 - [ ] 16. Datumkiezer: elke dag met echte zon, maan en historisch weer van Gouda (`?date=`)
