@@ -91,6 +91,7 @@ export function applyWeather(p, w) {
     ...p,
     sunVis: p.sunVis * (1 - .55 * c),
     golden: p.golden * (1 - .8 * c),
+    rake: p.rake * (1 - .75 * c),            // bewolkt: diffuus licht, nauwelijks schaduw in de verf
     twilight: p.twilight * (1 - .6 * c),
     skyTop: mix(p.skyTop, [.58, .61, .66], c * .8),
     skyHor: mix(p.skyHor, [.72, .74, .76], c * .8),

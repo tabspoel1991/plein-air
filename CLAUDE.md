@@ -11,7 +11,7 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 
 ## Starten
 - Dubbelklik `start.bat` → start `server.py` (Python, alleen standaardbibliotheek) en opent http://localhost:8000
-- URL-opties: `?frame` = lijst-modus · `?weather=clear|cloudy|drizzle|rain|storm|snow|fog` = weer forceren · `?time=13:00` = vaste tijd · `?moon=0..1` = maanfase (0 nieuw, .5 vol) · `?cover=0.7` = sneeuwdek · `?clean` = zonder knoppen
+- URL-opties: `?frame` = lijst-modus · `?weather=clear|cloudy|drizzle|rain|storm|snow|fog` = weer forceren · `?time=13:00` = vaste tijd · `?moon=0..1` = maanfase (0 nieuw, .5 vol) · `?cover=0.7` = sneeuwdek · `?relief=0..1` = verfreliëf (0 uit, standaard 0,6) · `?clean` = zonder knoppen
 - Demo: `?demo` speelt de film af (spatie = pauze, ←/→ = 2 s spoelen); `?demo&t=14&pause` = één exact frame
 - Sneltoetsen: M = masks tonen (debug), F = frame-modus; `tools/masks.html` = masks opnieuw genereren
 
@@ -28,12 +28,13 @@ Hou uitleg kort. Laat na elke feature zien hoe ik het in de browser test.
 - `js/scene/`
   - `autoMasks.js`: maakt masks uit kleur + helderheid + positie; vindt sterren en maan
   - `flowField.js`: streekrichting per pixel (structure tensor) → `flow.png`
+  - `relief.js`: hoogtekaart + normal map van de verf (helderheid, uitgesmeerd langs het flow field) → texture `u_relief`, één keer bij het laden
   - `scene.js`: laadt `assets/masks/*.png` + `scene.json` en pakt ze in 2 RGBA-textures (A: lucht, sterren, maan, cipres · B: dorp, ramen, heuvels). Eigen upload → simpele lucht/land-verdeling
 - `js/time/`: `sun.js` zonnestand Gouda → `profile.js` lichtprofiel (dag, nacht, lampen, schemering, gouden uur, zonpositie, kleuren; vloeiend ge-eased) · `moon.js` maanfase (synodische maand)
 - `js/weather/`: `weather.js` haalt elke 15 min Open-Meteo op (cache in localStorage, anders helder), zet het om in een weather state (cloud, rain, snow, fog, wind 0..1), `applyWeather` dempt het lichtprofiel, `windToMotion` wind → beweging · `state.js` laat de state vloeiend naar het doel lopen en houdt het sneeuwdek bij
 - `js/motion/motion.js`: bewegingswaarde (slider, of "Auto (wind)") → bewegingsklok (staat stil op 0) + sterkte, korrel, zoom; plus de weerklok voor regen/sneeuw
-- `js/relight/relight.js`: profiel → shader-uniforms (incl. maanschijf + fase); de kleurregels staan in de shader
-- `js/render/`: `renderer.js` (WebGL1, meerdere programs, render targets, vaste resolutie voor de film), `quality.js` (adaptieve resolutie), `shaders/main.frag` (MOTION → maanfase → RELIGHT → WEATHER land → ramen/zon/sterren → WEATHER neerslag → demo-print/museumwand → debug), `shaders/room.frag` (de demokamer: tv-frame, lamp, raam met Goudse grachtenpanden en sneeuw)
+- `js/relight/relight.js`: profiel → shader-uniforms (incl. maanschijf + fase, strijklicht van zon/maan × `?relief`); de kleurregels staan in de shader
+- `js/render/`: `renderer.js` (WebGL1, meerdere programs, render targets, vaste resolutie voor de film), `quality.js` (adaptieve resolutie), `shaders/main.frag` (MOTION → maanfase → RELIGHT → RELIEF strijklicht → WEATHER land → ramen/zon/sterren → WEATHER neerslag → demo-print/museumwand → debug), `shaders/room.frag` (de demokamer: tv-frame, lamp, raam met Goudse grachtenpanden en sneeuw)
 - `js/demo/`: `timeline.js` storyboard als pure functie `state(t)` (deterministisch) · `demo.js` eigen klok, kamer-pass, frame-voor-frame renderen · `captions.js` compositor (beeld + zwart + bijschriften + titel op een 2D-canvas)
 - `js/ui/controls.js`: knoppen, sliders, Auto (wind), weerlabel, sneltoetsen, URL-opties, frame-modus
 - `assets/`: `masks/` (grijswaarde-PNG per element, `flow.png`, `scene.json`), `fonts/` (Cormorant Garamond, OFL), `music/` (Gymnopédie No. 1, publiek domein) — bronnen in `CREDITS.md`

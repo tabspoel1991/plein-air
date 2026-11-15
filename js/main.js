@@ -8,6 +8,7 @@ import { createMotion } from './motion/motion.js';
 import { createRenderer } from './render/renderer.js';
 import { createQuality } from './render/quality.js';
 import { loadScene, genericScene } from './scene/scene.js';
+import { generateRelief } from './scene/relief.js';
 import { initUI } from './ui/controls.js';
 import { createWeather, applyWeather, windToMotion } from './weather/weather.js';
 import { createWeatherState, weatherUniforms } from './weather/state.js';
@@ -36,6 +37,7 @@ function setPainting(source, title, sc) {
   renderer.setTexture('u_maskA', 1, sc.maskA);
   renderer.setTexture('u_maskB', 2, sc.maskB);
   renderer.setTexture('u_flow', 3, sc.flow);
+  renderer.setTexture('u_relief', 5, generateRelief(c, sc.flow));   // unit 4 = demokamer, 7 = render targets
   ui.setTitle(title);
 }
 

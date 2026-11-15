@@ -73,8 +73,14 @@
 - Eerste 4K-poging liep vast op frame 255: Chrome zonder venster crasht soms bij 4K. Opgelost met een waakhond die Chrome herstart en verdergaat bij het volgende frame (7 herstarts in de eindrender, geen gaten: 1800 frames, 60,0 s)
 - Video's staan niet in git; `film/_master-*.mp4` zijn tussenbestanden (nodig voor `--mux`, mogen weg)
 
+## 11. Verfreliëf + strijklicht
+- [x] Hoogtekaart + normal map uit het schilderij zelf (`js/scene/relief.js`): helderheid als verfdikte, langs de streekrichting uit `flow.png` uitgesmeerd tot ribbels; één keer berekend bij het laden
+- [x] De zon strijkt erover vanuit zijn echte positie op het doek: sterk bij lage zon (ochtend, gouden uur), subtiel als hij hoog staat; bewolking en mist dempen het
+- [x] 's Nachts strijkt de maan erover, zachter en koel, sterker bij volle maan
+- [x] Testen: `?relief=0..1` (0 = uit, standaard 0,6); voor/na-beelden in `film/feature11/`
+- Een eigen upload krijgt een zwakker, korrelig reliëf (geen flow field). Op een novembermiddag (zon ~17°) blijft het reliëf goed zichtbaar; in de zomer (~61°) is het echt subtiel
+
 ## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
-- [ ] 11. Verfreliëf + strijklicht: streken krijgen reliëf, zon/maan strijkt erover (sterkst bij laag licht)
 - [ ] 12. Regen als penseelstreken in de kleuren van het schilderij
 - [ ] 13. Sneeuw als verfstipjes, sneeuwdek als impasto
 - [ ] 14. Mist en wolken als wervelende streken

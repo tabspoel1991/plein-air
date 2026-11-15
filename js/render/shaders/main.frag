@@ -33,6 +33,10 @@ uniform float u_wt, u_cloud, u_rain, u_snow, u_snowCover, u_fog, u_wind;
 uniform vec3 u_moonDisk;
 uniform float u_moonPhase;
 
+// verfreliëf: rg = normal x,y (b = hoogte); licht = (sterkte, x, y, hoogte van de bron in graden)
+uniform sampler2D u_relief;
+uniform vec4 u_reliefSun, u_reliefMoon;
+
 // demo: 0 = gewoon. u_still 1 = de onbewerkte museumprint; u_contain 1 = het hele doek in beeld (op donker);
 // u_pan = verschuiving omhoog/omlaag; u_wake = beweging alleen binnen straal z rond (x, y) (z <= 0: overal)
 uniform float u_still, u_contain, u_pan, u_moonOrig;   // u_moonOrig 1 = de originele sikkel houden
@@ -259,6 +263,34 @@ void main() {
     c += vec3(1., .55, .18) * rim * u_golden * (.25 + .6 * litK);
     c += vec3(1., .62, .30) * vil * litK * u_golden * .22;
     c += vec3(1., .58, .25) * rimV * u_golden * .3;
+  }
+
+  // ---------- RELIEF: zon of maan strijkt over de verfribbels ----------
+  // shade = dot(N, L) - L.z: een vlak stuk blijft gelijk, alleen de ribbels krijgen licht en schaduw
+  float kSun = u_reliefSun.x * (1. - u_fog * .8), kMoon = u_reliefMoon.x * (1. - u_fog * .8) * (1. - u_cloud * .75);
+  if (kSun + kMoon > .001) {
+    vec2 rn = texture2D(u_relief, iuv).rg * 2. - 1.;
+    vec3 N = vec3(rn, sqrt(max(.05, 1. - dot(rn, rn))));
+    float ws = mix(1., .55, sky);                                   // lucht iets zachter dan land
+    if (kSun > .001) {
+      vec2 d = (u_reliefSun.yz - iuv) * vec2(aspect, 1.);
+      float el = radians(clamp(u_reliefSun.w, 4., 75.));
+      vec3 Ls = normalize(vec3(d / (length(d) + 1e-4) * cos(el), sin(el)));
+      float sh = dot(N, Ls) - Ls.z;
+      float spec = pow(clamp(dot(reflect(-Ls, N), vec3(0., 0., 1.)), 0., 1.), 24.); // natte glans op de lichtkant
+      c = clamp(c, 0., 1.);
+      c *= 1. + clamp(sh, -.5, .5) * kSun * .75 * ws;
+      c += u_lightCol * spec * kSun * .06 * ws;
+    }
+    if (kMoon > .001) {
+      vec2 d = (u_reliefMoon.yz - iuv) * vec2(aspect, 1.);
+      float el = radians(u_reliefMoon.w);
+      vec3 Lm3 = normalize(vec3(d / (length(d) + 1e-4) * cos(el), sin(el)));
+      float sh = dot(N, Lm3) - Lm3.z;
+      c *= 1. + clamp(sh, -.5, .5) * kMoon * .8 * ws;
+      c += vec3(.55, .65, .9) * max(sh, 0.) * kMoon * .06 * ws;    // koel maanlicht op de lichtkant
+    }
+    c = clamp(c, 0., 1.);
   }
 
   // ---------- WEATHER (land) ----------

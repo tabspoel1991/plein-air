@@ -31,8 +31,11 @@ export function lightProfile(sun) {
   const golden = bell(e, 5, 5.5) * smooth(-2, 1, e);
   const glowCol = sun.morning ? [1.0, .58, .64] : [1.0, .50, .24];   // ochtend rozer, avond oranjer
 
+  // strijklicht over het verfreliëf: sterk bij een lage zon, subtiel als hij hoog staat, 0 eronder
+  const rake = smooth(-1, 2.5, e) * (1 - .7 * smooth(3, 25, e));
+
   return {
-    day, night, lamps, sunVis, twilight, golden, glowCol,
+    day, night, lamps, sunVis, twilight, golden, glowCol, rake, elev: e,
     sun: [sunX, sunY], sunDir: sunX < .5 ? -1 : 1,
     skyTop, skyHor, lightCol, shadowCol,
     vig: lerp(.55, .14, day),
