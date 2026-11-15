@@ -73,3 +73,30 @@ Feature 17: publiceer de app via GitHub Pages zodat ik hem overal op mijn telefo
 
 Na afloop: commit en push, ROADMAP.md bijwerken, zet de link in CLAUDE.md, en vertel me hoe ik hem op mijn telefoon open en op het beginscherm zet.
 ```
+
+---
+
+## Alles in één: 12–17
+
+```
+Begin in plan mode. Lees eerst CLAUDE.md, ROADMAP.md en PROMPTS.md. Feature 11 (verfreliëf, js/scene/relief.js, ?relief=) is klaar.
+
+Ik wil in deze sessie features 12 t/m 17 bouwen. De details per feature staan in PROMPTS.md. Maak één plan voor alles; na mijn akkoord werk je ze achter elkaar af zonder per feature opnieuw goedkeuring te vragen.
+
+Volgorde (eerst alles wat zonder mij kan):
+1. Feature 12 · Regen als penseelstreken
+2. Feature 13 · Sneeuw als verfstipjes (impasto-sneeuwdek met het verfreliëf)
+3. Feature 14 · Mist en wolken als wervelende streken
+4. Feature 16 · Datumkiezer (echte zon, maan en historisch weer van Gouda, ?date=)
+5. Feature 15 · GitHub-backup (hier stop je en vertel je me stap voor stap wat ik zelf moet doen, zoals inloggen)
+6. Feature 17 · Op mijn telefoon via GitHub Pages
+
+Regels:
+- Het gaat om De Sterrennacht; de fallback voor eigen uploads mag niet stuk gaan.
+- Na elke feature: voor/na-screenshots (headless, in film/feature<nr>/), een eigen git commit en ROADMAP.md bijwerken. Zo kan ik elke stap apart terugdraaien.
+- Breekt een feature iets wat al werkte (dag/nacht, maan, demo, film-render), herstel dat eerst voordat je verdergaat.
+- Houd je aan de afspraken in CLAUDE.md (shaders met de Edit-tool, geen kleuren boven 1 vóór pow()).
+- Werk CLAUDE.md bij met nieuwe URL-opties en de link van GitHub Pages.
+
+Eindrapport: per feature in 2-3 zinnen wat er veranderd is (architectuur, geen code) en hoe ik het in de browser test (URL's), plus de link voor op mijn telefoon.
+```
