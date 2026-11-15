@@ -73,6 +73,15 @@
 - Eerste 4K-poging liep vast op frame 255: Chrome zonder venster crasht soms bij 4K. Opgelost met een waakhond die Chrome herstart en verdergaat bij het volgende frame (7 herstarts in de eindrender, geen gaten: 1800 frames, 60,0 s)
 - Video's staan niet in git; `film/_master-*.mp4` zijn tussenbestanden (nodig voor `--mux`, mogen weg)
 
+## Gepland (prompts in `PROMPTS.md`, één sessie per feature)
+- [ ] 11. Verfreliëf + strijklicht: streken krijgen reliëf, zon/maan strijkt erover (sterkst bij laag licht)
+- [ ] 12. Regen als penseelstreken in de kleuren van het schilderij
+- [ ] 13. Sneeuw als verfstipjes, sneeuwdek als impasto
+- [ ] 14. Mist en wolken als wervelende streken
+- [ ] 15. GitHub-backup (online versiebeheer)
+- [ ] 16. Datumkiezer: elke dag met echte zon, maan en historisch weer van Gouda (`?date=`)
+- [ ] 17. Op de telefoon via GitHub Pages
+
 ## Later
 - Seizoenen
 - Andere schilderijen
